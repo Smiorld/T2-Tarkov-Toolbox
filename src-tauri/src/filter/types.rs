@@ -4,13 +4,16 @@ use std::collections::HashMap;
 /// 滤镜配置参数
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilterConfig {
-    /// 亮度 (0.5 - 2.0, 默认 1.0)
+    /// 亮度偏移 (-1.0 到 1.0, 默认 0.0)
+    /// 正值增加亮度，负值降低亮度
     pub brightness: f64,
 
-    /// 伽马值 (0.5 - 2.0, 默认 1.0)
+    /// 伽马值 (0.5 - 3.5, 默认 1.0)
+    /// <1.0 提亮暗部，>1.0 压暗亮部
     pub gamma: f64,
 
-    /// 对比度 (0.5 - 2.0, 默认 1.0)
+    /// 对比度调整 (-0.5 到 0.5, 默认 0.0)
+    /// 正值增强对比度，负值降低对比度
     pub contrast: f64,
 
     /// 红色通道缩放 (0.5 - 2.0, 默认 1.0)
@@ -26,9 +29,9 @@ pub struct FilterConfig {
 impl Default for FilterConfig {
     fn default() -> Self {
         Self {
-            brightness: 1.0,
-            gamma: 1.0,
-            contrast: 1.0,
+            brightness: 0.0,  // 亮度偏移默认为0
+            gamma: 1.0,       // 伽马默认为1.0
+            contrast: 0.0,    // 对比度偏移默认为0
             red_scale: 1.0,
             green_scale: 1.0,
             blue_scale: 1.0,
@@ -39,16 +42,29 @@ impl Default for FilterConfig {
 impl FilterConfig {
     /// 验证配置参数是否在有效范围内
     pub fn validate(&self) -> Result<(), String> {
-        let params = [
-            ("brightness", self.brightness),
-            ("gamma", self.gamma),
-            ("contrast", self.contrast),
+        // 验证亮度偏移
+        if self.brightness < -1.0 || self.brightness > 1.0 {
+            return Err(format!("brightness 必须在 -1.0 到 1.0 之间，当前值: {}", self.brightness));
+        }
+
+        // 验证伽马值
+        if self.gamma < 0.5 || self.gamma > 3.5 {
+            return Err(format!("gamma 必须在 0.5 到 3.5 之间，当前值: {}", self.gamma));
+        }
+
+        // 验证对比度调整
+        if self.contrast < -0.5 || self.contrast > 0.5 {
+            return Err(format!("contrast 必须在 -0.5 到 0.5 之间，当前值: {}", self.contrast));
+        }
+
+        // 验证通道缩放
+        let channels = [
             ("red_scale", self.red_scale),
             ("green_scale", self.green_scale),
             ("blue_scale", self.blue_scale),
         ];
 
-        for (name, value) in params.iter() {
+        for (name, value) in channels.iter() {
             if *value < 0.5 || *value > 2.0 {
                 return Err(format!("{} 必须在 0.5 到 2.0 之间，当前值: {}", name, value));
             }
@@ -58,21 +74,35 @@ impl FilterConfig {
     }
 
     /// 计算颜色值（应用亮度、伽马、对比度）
+    ///
+    /// 参数映射（符合行业标准）：
+    /// - gamma: 0.5-3.5 (伽马指数，1.0为线性)
+    /// - brightness: -1.0到1.0 (亮度偏移，0.0为不变)
+    /// - contrast: -0.5到0.5 (对比度调整，0.0为不变)
+    ///
+    /// 处理顺序：对比度 -> 伽马 -> 亮度 -> 通道缩放
     pub fn calculate_color_value(&self, channel_scale: f64, index: usize) -> u16 {
         // 基础值 (0-255 映射到 0-1)
         let base = index as f64 / 255.0;
 
-        // 应用对比度
-        let contrasted = ((base - 0.5) * self.contrast + 0.5).max(0.0).min(1.0);
+        // 1. 应用对比度调整 (调整斜率)
+        // contrast为0时，斜率为1.0（不变）
+        // contrast为正时，增强对比度（斜率>1）
+        // contrast为负时，降低对比度（斜率<1）
+        let contrast_factor = 1.0 + self.contrast;
+        let contrasted = ((base - 0.5) * contrast_factor + 0.5).max(0.0).min(1.0);
 
-        // 应用伽马
+        // 2. 应用伽马校正
         let gamma_corrected = contrasted.powf(1.0 / self.gamma);
 
-        // 应用亮度和通道缩放
-        let final_value = gamma_corrected * self.brightness * channel_scale;
+        // 3. 应用亮度偏移 (加法，确保不会超出范围)
+        let brightened = (gamma_corrected + self.brightness).max(0.0).min(1.0);
 
-        // 转换为 u16 并限制在有效范围内
-        (final_value * 65535.0).clamp(0.0, 65535.0) as u16
+        // 4. 应用通道缩放
+        let final_value = (brightened * channel_scale).max(0.0).min(1.0);
+
+        // 转换为 u16 (0-65535)
+        (final_value * 65535.0) as u16
     }
 }
 
@@ -152,9 +182,9 @@ impl Default for PresetCollection {
                 "白天".to_string(),
                 Some("F3".to_string()),
                 FilterConfig {
-                    brightness: 1.03,
-                    gamma: 1.5,
-                    contrast: 1.05,
+                    brightness: 0.05,   // 微增亮度
+                    gamma: 1.2,         // 轻微提亮暗部
+                    contrast: 0.05,     // 微增对比度
                     ..FilterConfig::default()
                 },
             ),
@@ -168,9 +198,9 @@ impl Default for PresetCollection {
                 "夜间".to_string(),
                 Some("F4".to_string()),
                 FilterConfig {
-                    brightness: 1.2,
-                    gamma: 1.6,
-                    contrast: 1.15,
+                    brightness: 0.3,    // 明显增加亮度
+                    gamma: 0.7,         // 提亮暗部（<1.0）
+                    contrast: 0.15,     // 增强对比度
                     ..FilterConfig::default()
                 },
             ),
