@@ -1,0 +1,24 @@
+{
+  "skill-developer": {
+    "description": "用于创建和管理 Claude Code 技能的元技能",
+    "keywordTriggers": [
+      "创建技能",
+      "skill",
+      "技能开发",
+      "create skill",
+      "skill development"
+    ],
+    "fileTriggers": {
+      "pathPatterns": [
+        ".claude/skills/**/*.md",
+        ".claude/skills/**/SKILL.md"
+      ]
+    },
+    "promptPatterns": [
+      "如何.*技能",
+      "怎么.*skill",
+      "创建.*技能",
+      "开发.*技能"
+    ]
+  }
+}

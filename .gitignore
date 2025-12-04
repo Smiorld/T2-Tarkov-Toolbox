@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+target/
+
+# Build outputs
+dist/
+build/
+*.exe
+*.pdb
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temp files
+*.tmp
+*.bak
+nul
