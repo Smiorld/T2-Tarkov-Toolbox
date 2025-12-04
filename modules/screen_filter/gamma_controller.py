@@ -2,7 +2,7 @@ import ctypes
 from ctypes import wintypes
 import math
 from typing import List, Tuple, Dict
-from models import FilterConfig
+from modules.screen_filter.models import FilterConfig
 
 # Windows API Constants and Types
 HDC = wintypes.HANDLE

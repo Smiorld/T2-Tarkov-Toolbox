@@ -1,6 +1,6 @@
 import json
 from typing import List, Optional
-from models import FilterPreset, FilterConfig
+from modules.screen_filter.models import FilterPreset, FilterConfig
 
 class PresetManager:
     def __init__(self, config_file: str = "filter_presets.json"):
