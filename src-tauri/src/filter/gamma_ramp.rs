@@ -248,6 +248,12 @@ impl GammaRampController {
         // 生成新的 Gamma Ramp
         let ramp = GammaRamp::from_config(config);
 
+        // 打印调试信息
+        println!("生成的 Gamma Ramp 值:");
+        println!("  index=0: R={}, G={}, B={}", ramp.red[0], ramp.green[0], ramp.blue[0]);
+        println!("  index=127: R={}, G={}, B={}", ramp.red[127], ramp.green[127], ramp.blue[127]);
+        println!("  index=255: R={}, G={}, B={}", ramp.red[255], ramp.green[255], ramp.blue[255]);
+
         // 应用到指定显示器
         self.set_ramp_for_monitor(&ramp, monitor_device)
     }

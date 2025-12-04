@@ -168,9 +168,9 @@ impl Default for PresetCollection {
                 "夜间".to_string(),
                 Some("F4".to_string()),
                 FilterConfig {
-                    brightness: 1.55,
-                    gamma: 1.95,
-                    contrast: 1.22,
+                    brightness: 1.2,
+                    gamma: 1.6,
+                    contrast: 1.15,
                     ..FilterConfig::default()
                 },
             ),
