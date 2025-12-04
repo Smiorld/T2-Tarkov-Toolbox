@@ -8,6 +8,7 @@ from typing import List
 from modules.screen_filter.models import FilterConfig, FilterPreset
 from modules.screen_filter.gamma_controller import GammaController
 from modules.screen_filter.preset_manager import PresetManager
+from modules.screen_filter.value_mapper import ValueMapper
 
 
 class ScreenFilterUI(ctk.CTkFrame):
@@ -25,6 +26,7 @@ class ScreenFilterUI(ctk.CTkFrame):
         self.selected_monitors: List[str] = []
         self.monitor_vars = {}  # device_name -> BooleanVar
         self.running = True
+        self.validation_warning_label = None  # Will be created in main area
 
         # Layout
         self.grid_columnconfigure(1, weight=1)
@@ -111,6 +113,14 @@ class ScreenFilterUI(ctk.CTkFrame):
         )
         self.reset_filter_btn.pack(side="right")
 
+        # Validation Warning (initially hidden)
+        self.validation_warning_label = ctk.CTkLabel(
+            self.header_frame,
+            text="",
+            font=ctk.CTkFont(size=12),
+            text_color="orange"
+        )
+
         # Monitor Selection
         self.monitor_frame = ctk.CTkFrame(self.main_frame)
         self.monitor_frame.pack(fill="x", pady=(0, 20))
@@ -168,15 +178,22 @@ class ScreenFilterUI(ctk.CTkFrame):
 
             # Update config
             if self.current_preset:
-                # Handle special conversions
-                final_val = val
-                if attr_name == "brightness" or attr_name == "contrast":
-                    final_val = val / 100.0
+                # Convert UI value to algorithm value using ValueMapper
+                if attr_name == "brightness":
+                    final_val = ValueMapper.ui_to_algo_brightness(val)
+                elif attr_name == "contrast":
+                    final_val = ValueMapper.ui_to_algo_contrast(val)
+                elif attr_name == "gamma":
+                    final_val = ValueMapper.ui_to_algo_gamma(val)
                 elif attr_name.endswith("_scale"):
-                    final_val = val / 255.0
+                    final_val = ValueMapper.ui_to_algo_rgb(val)
+                else:
+                    final_val = val
 
                 setattr(self.current_preset.config, attr_name, final_val)
-                self.apply_current_config()
+
+                # Validate and apply
+                self._validate_and_apply_config()
 
         slider = ctk.CTkSlider(
             frame,
@@ -252,16 +269,17 @@ class ScreenFilterUI(ctk.CTkFrame):
         self.current_preset = preset
         self.preset_title.configure(text=preset.name)
 
-        # Update sliders
+        # Update sliders - convert algorithm values to UI values
         c = preset.config
-        self._update_slider("brightness", c.brightness * 100)
-        self._update_slider("contrast", c.contrast * 100)
-        self._update_slider("gamma", c.gamma)
-        self._update_slider("red_scale", c.red_scale * 255)
-        self._update_slider("green_scale", c.green_scale * 255)
-        self._update_slider("blue_scale", c.blue_scale * 255)
+        self._update_slider("brightness", ValueMapper.algo_to_ui_brightness(c.brightness))
+        self._update_slider("contrast", ValueMapper.algo_to_ui_contrast(c.contrast))
+        self._update_slider("gamma", ValueMapper.algo_to_ui_gamma(c.gamma))
+        self._update_slider("red_scale", ValueMapper.algo_to_ui_rgb(c.red_scale))
+        self._update_slider("green_scale", ValueMapper.algo_to_ui_rgb(c.green_scale))
+        self._update_slider("blue_scale", ValueMapper.algo_to_ui_rgb(c.blue_scale))
 
-        self.apply_current_config()
+        # Validate and apply
+        self._validate_and_apply_config()
 
     def _update_slider(self, attr_name, value):
         slider = getattr(self, f"slider_{attr_name}")
@@ -273,12 +291,42 @@ class ScreenFilterUI(ctk.CTkFrame):
         else:
             label.configure(text=f"{int(value)}")
 
-    def apply_current_config(self):
-        if self.current_preset and self.selected_monitors:
+    def _validate_and_apply_config(self):
+        """Validate config and apply if valid, show warning if not"""
+        if not self.current_preset or not self.selected_monitors:
+            return
+
+        # Validate configuration
+        is_valid, error_msg = ValueMapper.validate_config(self.current_preset.config)
+
+        if is_valid:
+            # Apply valid configuration
             self.gamma_controller.apply_config(
                 self.current_preset.config,
                 self.selected_monitors
             )
+            # Hide warning
+            if self.validation_warning_label:
+                self.validation_warning_label.pack_forget()
+        else:
+            # Show warning and suggest safe values
+            safe_config = ValueMapper.suggest_safe_values(self.current_preset.config)
+
+            # Display warning
+            if self.validation_warning_label:
+                warning_text = f"⚠ 参数组合可能导致问题，已自动调整"
+                self.validation_warning_label.configure(text=warning_text)
+                self.validation_warning_label.pack(side="top", pady=5)
+
+            # Apply safe configuration instead
+            self.gamma_controller.apply_config(
+                safe_config,
+                self.selected_monitors
+            )
+
+    def apply_current_config(self):
+        """Legacy method for compatibility"""
+        self._validate_and_apply_config()
 
     def save_current_preset(self):
         if self.current_preset:

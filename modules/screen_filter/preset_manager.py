@@ -63,16 +63,16 @@ class PresetManager:
         self.save_presets()
 
     def _create_default_presets(self) -> List[FilterPreset]:
-        """Create default presets"""
+        """Create default presets with safe algorithm values"""
         return [
             FilterPreset(
                 id="default",
                 name="默认",
                 hotkey="F2",
                 config=FilterConfig(
-                    brightness=0.0,
-                    gamma=1.0,
-                    contrast=0.0,
+                    brightness=0.0,    # 0% brightness (neutral)
+                    gamma=1.0,         # Linear gamma
+                    contrast=0.0,      # 0% contrast (neutral)
                     red_scale=1.0,
                     green_scale=1.0,
                     blue_scale=1.0
@@ -84,9 +84,9 @@ class PresetManager:
                 name="白天",
                 hotkey="F3",
                 config=FilterConfig(
-                    brightness=0.03,
-                    gamma=1.5,
-                    contrast=0.05,
+                    brightness=0.03,   # +3% brightness
+                    gamma=1.5,         # Slightly darken brights
+                    contrast=0.05,     # +5% contrast
                     red_scale=1.0,
                     green_scale=1.0,
                     blue_scale=1.0
@@ -98,9 +98,9 @@ class PresetManager:
                 name="夜间",
                 hotkey="F4",
                 config=FilterConfig(
-                    brightness=0.55,
-                    gamma=1.95,
-                    contrast=0.22,
+                    brightness=0.45,   # +45% brightness (within safe range of ±60%)
+                    gamma=1.95,        # Lighten darks significantly
+                    contrast=0.15,     # +15% contrast (within safe range of ±25%)
                     red_scale=1.0,
                     green_scale=1.0,
                     blue_scale=1.0
