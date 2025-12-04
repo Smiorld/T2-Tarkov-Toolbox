@@ -1,137 +1,133 @@
-# T2 塔科夫工具箱
+# T2 Tarkov Toolbox - Screen Filter
 
-一个纯本地运行的《逃离塔科夫》辅助工具桌面应用，提供屏幕滤镜、战术地图、物价查询等功能。
+一个纯本地运行的Windows屏幕滤镜工具，提供自定义屏幕颜色、亮度、对比度和伽马调整。
 
 ## ✨ 功能特性
 
-- 🎨 **屏幕滤镜** - 自定义屏幕颜色、亮度、对比度
-- 🗺️ **战术地图** - 自动识别位置（通过截图EXIF数据），显示出生点、提取点、任务点
-- 💰 **物价查询** - 实时查询物品价格、24h平均价、商人收购价
-- ⚙️ **全局设置** - 配置应用参数、截图路径、快捷键
+- 🎨 **实时屏幕滤镜** - 自定义亮度、伽马、对比度和RGB通道
+- 🎯 **预设管理** - 内置默认、白天、夜间三个预设，支持自定义预设
+- ⌨️ **全局快捷键** - F2/F3/F4快速切换预设
+- 🖥️ **多显示器支持** - 可选择应用到特定显示器或全部显示器
+- 💾 **配置持久化** - 预设自动保存到JSON文件
 
 ## 🛠️ 技术栈
 
-### 前端
-- React 18 + TypeScript
-- Tailwind CSS
-- React Router
-- Zustand (状态管理)
+- **Python 3.11+**
+- **CustomTkinter** - 现代化的Tkinter GUI框架
+- **pywin32** - Windows API调用（SetDeviceGammaRamp）
+- **keyboard** - 全局快捷键监听
 
-### 后端
-- Rust
-- Tauri 2.0
-- reqwest (HTTP 客户端)
-- exif (图片元数据解析)
-- notify (文件系统监控)
-- rusqlite (本地数据库)
-
-### 外部 API
-- [Tarkov.dev GraphQL API](https://api.tarkov.dev/) - 物价、物品、地图数据
-
-## 🚀 开发环境配置
+## 🚀 安装和运行
 
 ### 前置要求
 
-- Node.js 18+ 
-- Rust 1.70+
-- pnpm (推荐) 或 npm
+- Python 3.11+
+- Windows 操作系统（需要GDI API支持）
 
 ### 安装依赖
 
 ```bash
-# 安装前端依赖
-pnpm install
-
-# Rust 依赖会在构建时自动安装
+pip install -r requirements.txt
 ```
 
-### 开发模式运行
+### 运行程序
 
 ```bash
-# 启动开发服务器（前端热重载 + Rust 编译）
-pnpm tauri dev
+python main.py
 ```
 
-### 构建生产版本
+## 📖 使用说明
 
-```bash
-# 构建 Windows .exe
-pnpm tauri build
-```
+### 参数调整
 
-构建产物位于 `src-tauri/target/release/bundle/`
+**亮度（Brightness）**: -100 到 100
+- 正值增加亮度，负值降低亮度
+- 默认值：0
 
-## 📖 项目结构
+**伽马（Gamma）**: 0.5 到 3.5
+- <1.0 提亮暗部，>1.0 压暗亮部
+- 默认值：1.0
+
+**对比度（Contrast）**: -50 到 50
+- 正值增强对比度，负值降低对比度
+- 默认值：0
+
+**RGB通道**: 0.5 到 2.0
+- 独立调整红、绿、蓝通道的强度
+- 默认值：1.0
+
+### 预设管理
+
+1. **默认预设**（F2）: 标准显示设置
+2. **白天预设**（F3）: 轻微增强对比度
+3. **夜间预设**（F4）: 高亮度和伽马，适合暗环境
+
+### 快捷键
+
+- `F2` - 应用默认预设
+- `F3` - 应用白天预设
+- `F4` - 应用夜间预设
+
+## 🏗️ 项目结构
 
 ```
 T2-Tarkov-Toolbox/
-├── .claude/                # Claude AI 上下文文档
-├── docs/                   # 详细技术文档
-│   ├── API_GUIDE.md       # Tarkov.dev API 使用指南
-│   └── SCREENSHOT_GUIDE.md # 截图解析技术说明
-├── src-tauri/             # Rust 后端
-│   ├── src/
-│   │   ├── main.rs        # 入口文件
-│   │   └── commands/      # Tauri 命令
-│   ├── Cargo.toml         # Rust 依赖
-│   └── tauri.conf.json    # Tauri 配置
-├── src/                   # React 前端
-│   ├── pages/             # 页面组件
-│   ├── components/        # 可复用组件
-│   ├── hooks/             # 自定义 Hooks
-│   ├── App.tsx
-│   └── main.tsx
-├── public/                # 静态资源
-└── package.json
+├── main.py              # 主程序入口（CustomTkinter GUI）
+├── gamma_controller.py  # Windows Gamma Ramp控制器
+├── models.py            # 数据模型定义
+├── preset_manager.py    # 预设管理器
+├── probe_limits.py      # 参数限制探测工具
+├── requirements.txt     # Python依赖
+└── filter_presets.json  # 预设配置文件（自动生成）
 ```
 
-## 🎓 开发指南
+## 🔧 技术原理
 
-### 添加新的 Tauri 命令
+### Windows Gamma Ramp
 
-1. 在 `src-tauri/src/commands/` 创建新模块
-2. 实现命令函数（加上 `#[tauri::command]` 宏）
-3. 在 `main.rs` 中注册命令
-4. 前端通过 `invoke('command_name', { args })` 调用
+程序通过Windows GDI API的`SetDeviceGammaRamp`函数控制显示器的颜色查找表（LUT）。
 
-示例：
+**关键算法**：
+1. 对比度调整：调整斜率 `(base - 0.5) * (1 + contrast) + 0.5`
+2. 伽马校正：幂函数 `value^(1/gamma)`
+3. 亮度调整：乘法缩放 `value * (1 + brightness)`
+4. 通道缩放：独立调整RGB `value * channel_scale`
 
-```rust
-// src-tauri/src/commands/example.rs
-#[tauri::command]
-pub fn hello(name: String) -> String {
-    format!("Hello, {}!", name)
-}
-```
+每一步都确保值在 `[0, 1]` 范围内，防止产生平顶曲线（会被驱动拒绝）。
 
-```typescript
-// src/pages/Example.tsx
-import { invoke } from '@tauri-apps/api/tauri';
+### 参数映射
 
-const result = await invoke<string>('hello', { name: 'World' });
-```
+UI显示的参数会自动映射到算法使用的真实值：
 
-### 调试技巧
+| 参数 | UI范围 | 算法范围 | 映射公式 |
+|------|--------|---------|---------|
+| 亮度 | -100到100 | -1.0到1.0 | `brightness / 100` |
+| 伽马 | 0.5到3.5 | 0.5到3.5 | 直接使用 |
+| 对比度 | -50到50 | -0.5到0.5 | `contrast / 100` |
 
-- 前端: 打开 DevTools（开发模式自动启用）
-- Rust: 使用 `println!()` 或 `eprintln!()` 输出到控制台
-- 查看 Tauri 日志: `pnpm tauri dev --verbose`
+## ⚠️ 注意事项
 
-## 📚 参考资源
+1. **管理员权限**: 某些显卡驱动可能需要管理员权限才能设置Gamma Ramp
+2. **驱动兼容性**: 部分显卡驱动可能不支持或限制Gamma Ramp的调整范围
+3. **参数限制**: 过高的参数组合可能导致曲线饱和，建议使用预设值
 
-- [Tauri 官方文档](https://tauri.app/)
-- [Tarkov.dev API 文档](https://api.tarkov.dev/)
-- [Rust 官方文档](https://doc.rust-lang.org/)
+## 🐛 故障排查
 
-## 🤝 贡献指南
+### "无法为显示器设置 Gamma Ramp" 错误
 
-欢迎提交 Issue 和 Pull Request！
+**原因**：参数组合导致Gamma曲线在中间值就达到最大值（平顶曲线），被驱动拒绝。
 
-1. Fork 本仓库
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+**解决方案**：
+- 降低亮度值
+- 使用内置预设
+- 运行 `probe_limits.py` 探测你的显卡支持的最大参数值
+
+## 📝 开发计划
+
+- [ ] 添加曲线预览图表
+- [ ] 支持导入/导出预设
+- [ ] 添加定时任务（自动切换预设）
+- [ ] 支持每个显示器独立配置
 
 ## 📄 许可证
 
@@ -139,9 +135,5 @@ MIT License
 
 ## 🙏 致谢
 
-- [Tarkov.dev](https://tarkov.dev/) - 提供免费的塔科夫数据 API
-- [TarkovMonitor](https://github.com/the-hideout/TarkovMonitor) - 截图解析技术参考
-
----
-
-**注意**: 本工具仅用于个人学习和辅助游戏体验，不涉及任何作弊行为。请遵守游戏服务条款。
+- Windows GDI API文档
+- CustomTkinter框架
