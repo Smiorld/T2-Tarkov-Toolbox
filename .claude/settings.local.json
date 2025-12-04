@@ -24,7 +24,9 @@
       "Bash(powershell -Command \"$env:PATH = $env:PATH -replace ''D:\\tool\\Git\\usr\\bin;'','''' -replace ''D:\\tool\\Git\\bin;'',''''; npm run tauri dev\")",
       "Bash(dir \"C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\")",
       "Bash(dir \"C:\\Program Files\\Microsoft Visual Studio\\2022\")",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

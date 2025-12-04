@@ -1,26 +1,40 @@
-# Dependencies
-node_modules/
-target/
-
-# Build outputs
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
 dist/
 build/
-*.exe
-*.pdb
+*.egg
+
+# Node modules (for hooks)
+node_modules/
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
+nul
 
 # Logs
 *.log
-npm-debug.log*
 
 # Temp files
 *.tmp
 *.bak
-nul
+
+# Application specific
+filter_presets.json
+*.db
+*.sqlite
