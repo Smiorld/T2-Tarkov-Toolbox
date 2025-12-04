@@ -223,6 +223,30 @@ export default function ScreenFilter() {
         }
     };
 
+    // UI值转换为后端值
+    const uiToBackend = (key: keyof FilterConfig, uiValue: number): number => {
+        switch (key) {
+            case 'brightness':
+                return uiValue / 100; // -100~100 -> -1.0~1.0
+            case 'contrast':
+                return uiValue / 100; // -50~50 -> -0.5~0.5
+            default:
+                return uiValue;
+        }
+    };
+
+    // 后端值转换为UI值
+    const backendToUI = (key: keyof FilterConfig, backendValue: number): number => {
+        switch (key) {
+            case 'brightness':
+                return backendValue * 100; // -1.0~1.0 -> -100~100
+            case 'contrast':
+                return backendValue * 100; // -0.5~0.5 -> -50~50
+            default:
+                return backendValue;
+        }
+    };
+
     const handleSliderChange = async (key: keyof FilterConfig, value: number) => {
         if (!editingPreset) return;
         if (selectedMonitorIds.length === 0) return;
@@ -508,15 +532,15 @@ export default function ScreenFilter() {
                                 <div className="space-y-6 p-6 bg-gray-50 dark:bg-gray-900 rounded-xl">
                                     <SliderControl
                                         label="亮度 (Brightness)"
-                                        value={editingPreset.config.brightness}
-                                        onChange={(v) => handleSliderChange('brightness', v)}
-                                        min={0} max={2.0} step={0.01}
+                                        value={backendToUI('brightness', editingPreset.config.brightness)}
+                                        onChange={(v) => handleSliderChange('brightness', uiToBackend('brightness', v))}
+                                        min={-100} max={100} step={1}
                                     />
                                     <SliderControl
                                         label="对比度 (Contrast)"
-                                        value={editingPreset.config.contrast}
-                                        onChange={(v) => handleSliderChange('contrast', v)}
-                                        min={0.5} max={1.5} step={0.01}
+                                        value={backendToUI('contrast', editingPreset.config.contrast)}
+                                        onChange={(v) => handleSliderChange('contrast', uiToBackend('contrast', v))}
+                                        min={-50} max={50} step={1}
                                     />
                                     <SliderControl
                                         label="伽马 (Gamma)"
@@ -564,11 +588,12 @@ export default function ScreenFilter() {
 function SliderControl({ label, value, onChange, min, max, step, colorClass = "accent-blue-600" }: {
     label: string, value: number, onChange: (v: number) => void, min: number, max: number, step: number, colorClass?: string
 }) {
-    const [inputValue, setInputValue] = useState(value.toFixed(2));
+    const decimals = step < 1 ? 2 : 0;
+    const [inputValue, setInputValue] = useState(value.toFixed(decimals));
 
     useEffect(() => {
-        setInputValue(value.toFixed(2));
-    }, [value]);
+        setInputValue(value.toFixed(decimals));
+    }, [value, decimals]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInputValue(e.target.value);
@@ -579,7 +604,7 @@ function SliderControl({ label, value, onChange, min, max, step, colorClass = "a
         if (!isNaN(numValue)) {
             const clampedValue = Math.max(min, Math.min(max, numValue));
             onChange(clampedValue);
-            setInputValue(clampedValue.toFixed(2));
+            setInputValue(clampedValue.toFixed(decimals));
         } else {
             setInputValue(value.toFixed(2));
         }
@@ -603,7 +628,7 @@ function SliderControl({ label, value, onChange, min, max, step, colorClass = "a
                     onBlur={handleInputBlur}
                     onFocus={(e) => e.target.select()}
                     onKeyDown={handleInputKeyDown}
-                    className="text-sm font-mono text-gray-500 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-8 text-right"
+                    className="text-sm font-mono text-gray-500 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none w-16 text-right"
                 />
             </div>
             <input

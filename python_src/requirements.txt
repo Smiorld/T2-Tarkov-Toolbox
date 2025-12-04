@@ -1,0 +1,4 @@
+customtkinter
+pywin32
+keyboard
+screeninfo

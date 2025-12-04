@@ -29,9 +29,9 @@ pub struct FilterConfig {
 impl Default for FilterConfig {
     fn default() -> Self {
         Self {
-            brightness: 0.0,  // 亮度偏移默认为0
-            gamma: 1.0,       // 伽马默认为1.0
-            contrast: 0.0,    // 对比度偏移默认为0
+            brightness: 0.0,  // UI: 0
+            gamma: 1.0,       // UI: 1.0
+            contrast: 0.0,    // UI: 0
             red_scale: 1.0,
             green_scale: 1.0,
             blue_scale: 1.0,
@@ -77,7 +77,7 @@ impl FilterConfig {
     ///
     /// 参数映射（符合行业标准）：
     /// - gamma: 0.5-3.5 (伽马指数，1.0为线性)
-    /// - brightness: -1.0到1.0 (亮度偏移，0.0为不变)
+    /// - brightness: -1.0到1.0 (亮度缩放，0.0为不变，1.0为翻倍，-1.0为全黑)
     /// - contrast: -0.5到0.5 (对比度调整，0.0为不变)
     ///
     /// 处理顺序：对比度 -> 伽马 -> 亮度 -> 通道缩放
@@ -95,8 +95,12 @@ impl FilterConfig {
         // 2. 应用伽马校正
         let gamma_corrected = contrasted.powf(1.0 / self.gamma);
 
-        // 3. 应用亮度偏移 (加法，确保不会超出范围)
-        let brightened = (gamma_corrected + self.brightness).max(0.0).min(1.0);
+        // 3. 应用亮度缩放 (乘法，避免溢出)
+        // brightness = 0.0 → 缩放因子 1.0 (不变)
+        // brightness = 1.0 → 缩放因子 2.0 (翻倍)
+        // brightness = -1.0 → 缩放因子 0.0 (全黑)
+        let brightness_factor = 1.0 + self.brightness;
+        let brightened = (gamma_corrected * brightness_factor).max(0.0).min(1.0);
 
         // 4. 应用通道缩放
         let final_value = (brightened * channel_scale).max(0.0).min(1.0);
@@ -182,9 +186,9 @@ impl Default for PresetCollection {
                 "白天".to_string(),
                 Some("F3".to_string()),
                 FilterConfig {
-                    brightness: 0.05,   // 微增亮度
-                    gamma: 1.2,         // 轻微提亮暗部
-                    contrast: 0.05,     // 微增对比度
+                    brightness: 0.03,   // UI: 3
+                    gamma: 1.5,         // UI: 1.5
+                    contrast: 0.05,     // UI: 5
                     ..FilterConfig::default()
                 },
             ),
@@ -198,9 +202,9 @@ impl Default for PresetCollection {
                 "夜间".to_string(),
                 Some("F4".to_string()),
                 FilterConfig {
-                    brightness: 0.3,    // 明显增加亮度
-                    gamma: 0.7,         // 提亮暗部（<1.0）
-                    contrast: 0.15,     // 增强对比度
+                    brightness: 0.55,   // UI: 55
+                    gamma: 1.95,        // UI: 1.95
+                    contrast: 0.22,     // UI: 22
                     ..FilterConfig::default()
                 },
             ),

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "default",
+    "name": "默认 (Default)",
+    "config": {
+      "brightness": 0.0,
+      "gamma": 1.0,
+      "contrast": 0.0,
+      "red_scale": 1.0,
+      "green_scale": 1.0,
+      "blue_scale": 1.0
+    },
+    "hotkey": null,
+    "is_default": true
+  },
+  {
+    "id": "daytime",
+    "name": "白天 (Daytime)",
+    "config": {
+      "brightness": 0.03,
+      "gamma": 1.5,
+      "contrast": 0.05,
+      "red_scale": 1.0,
+      "green_scale": 1.0,
+      "blue_scale": 1.0
+    },
+    "hotkey": "F3",
+    "is_default": true
+  },
+  {
+    "id": "nighttime",
+    "name": "夜间 (Nighttime)",
+    "config": {
+      "brightness": 0.55,
+      "gamma": 1.95,
+      "contrast": 0.22,
+      "red_scale": 1.0,
+      "green_scale": 1.0,
+      "blue_scale": 1.0
+    },
+    "hotkey": "F4",
+    "is_default": true
+  }
+]
