@@ -146,7 +146,7 @@ class ScreenFilterUI(ctk.CTkFrame):
         # Contrast
         self._create_slider(self.controls_frame, "对比度 (Contrast)", "contrast", -50, 50, 0)
         # Gamma
-        self._create_slider(self.controls_frame, "伽马 (Gamma)", "gamma", 0.5, 3.5, 1.0, step=0.01)
+        self._create_slider(self.controls_frame, "伽马 (Gamma)", "gamma", 0.5, 3.0, 1.0, step=0.01)
 
         # RGB
         ctk.CTkLabel(

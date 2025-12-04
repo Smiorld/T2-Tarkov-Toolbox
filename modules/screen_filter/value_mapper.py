@@ -12,24 +12,26 @@ class ValueMapper:
     """Maps UI values to algorithm values with safety constraints"""
 
     # UI Ranges (what user sees)
-    BRIGHTNESS_UI_RANGE = (-100, 100)  # Percentage
-    GAMMA_UI_RANGE = (0.5, 3.5)        # Direct value
-    CONTRAST_UI_RANGE = (-50, 50)      # Percentage
-    RGB_UI_RANGE = (0, 255)            # 0-255 scale
+    BRIGHTNESS_UI_RANGE = (-100, 100)  # Percentage: -100% to +100%
+    GAMMA_UI_RANGE = (0.5, 3.0)        # Direct value: 0.5 to 3.0
+    CONTRAST_UI_RANGE = (-50, 50)      # Percentage: -50% to +50%
+    RGB_UI_RANGE = (0, 255)            # 0-255 scale: 0% to 100%
 
     # Algorithm Ranges (internal)
-    # These ranges ensure no saturation can occur in the gamma ramp calculation
-    # Using a modified contrast formula that prevents saturation:
-    # Instead of (v - 0.5) * (1 + C) + 0.5, we use a clamped approach
-    BRIGHTNESS_ALGO_RANGE = (-0.6, 0.6)   # Reduced to prevent saturation
-    GAMMA_ALGO_RANGE = (0.5, 3.5)         # Same as UI
-    CONTRAST_ALGO_RANGE = (-1.0, 1.0)     # Full range, but applied differently
-    RGB_ALGO_RANGE = (0.0, 1.0)           # Normalized
+    # Based on industry standards (FFmpeg, Gamma Panel, NVIDIA Freestyle)
+    # References:
+    # - FFmpeg eq filter: brightness ±1.0, contrast ±2.0, gamma 0.1-10.0
+    # - Gamma Panel: brightness ±1.0, contrast 0.1-3.0, gamma 0.3-4.4
+    # - NVIDIA Freestyle: typically uses ±40% for adjustments
+    BRIGHTNESS_ALGO_RANGE = (-0.5, 0.5)   # Conservative ±50% (within FFmpeg's ±1.0)
+    GAMMA_ALGO_RANGE = (0.5, 3.0)         # Reduced upper bound for safety
+    CONTRAST_ALGO_RANGE = (-0.5, 0.5)     # Conservative ±50% (within FFmpeg's ±2.0)
+    RGB_ALGO_RANGE = (0.0, 1.0)           # Normalized 0-100%
 
     @classmethod
     def ui_to_algo_brightness(cls, ui_value: float) -> float:
         """Convert UI brightness (-100 to 100) to algorithm value"""
-        # Map -100..100 to -0.6..0.6 (reduced range for safety)
+        # Map -100..100 to -0.5..0.5 (industry standard safe range)
         min_ui, max_ui = cls.BRIGHTNESS_UI_RANGE
         min_algo, max_algo = cls.BRIGHTNESS_ALGO_RANGE
 
@@ -65,7 +67,7 @@ class ValueMapper:
     @classmethod
     def ui_to_algo_contrast(cls, ui_value: float) -> float:
         """Convert UI contrast (-50 to 50) to algorithm value"""
-        # Map -50..50 to -1.0..1.0 (full range with clamping in algorithm)
+        # Map -50..50 to -0.5..0.5 (conservative range based on industry standards)
         min_ui, max_ui = cls.CONTRAST_UI_RANGE
         min_algo, max_algo = cls.CONTRAST_ALGO_RANGE
 

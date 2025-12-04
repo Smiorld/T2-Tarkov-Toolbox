@@ -31,7 +31,7 @@ def test_ui_ranges():
         print(f"  UI: {contrast_ui:4} -> Algo: {contrast_algo:6.3f}")
 
     print("\nTesting Gamma Range:")
-    for gamma_ui in [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]:
+    for gamma_ui in [0.5, 1.0, 1.5, 2.0, 2.5, 3.0]:
         gamma_algo = ValueMapper.ui_to_algo_gamma(gamma_ui)
         print(f"  UI: {gamma_ui:4.1f} -> Algo: {gamma_algo:6.3f}")
 
@@ -46,14 +46,14 @@ def test_extreme_combinations():
     print("\n=== Testing Extreme Combinations ===\n")
 
     test_cases = [
-        ("Max Brightness + Max Contrast", 100, 3.5, 50),
-        ("Max Brightness + Max Gamma", 100, 3.5, 0),
+        ("Max Brightness + Max Contrast", 100, 3.0, 50),
+        ("Max Brightness + Max Gamma", 100, 3.0, 0),
         ("Max Brightness + Min Gamma", 100, 0.5, 0),
         ("Min Brightness + Max Contrast", -100, 1.0, 50),
         ("Min Brightness + Min Contrast", -100, 1.0, -50),
         ("Balanced High Values", 75, 2.5, 35),
         ("Balanced Low Values", -75, 0.75, -35),
-        ("High Gamma + High Contrast", 0, 3.5, 50),
+        ("High Gamma + High Contrast", 0, 3.0, 50),
         ("Low Gamma + High Contrast", 0, 0.5, 50),
     ]
 
@@ -127,7 +127,7 @@ def test_round_trip_conversion():
     test_values = {
         "brightness": [-100, -50, 0, 50, 100],
         "contrast": [-50, -25, 0, 25, 50],
-        "gamma": [0.5, 1.0, 2.0, 3.5],
+        "gamma": [0.5, 1.0, 2.0, 3.0],
         "rgb": [0, 64, 128, 192, 255]
     }
 
