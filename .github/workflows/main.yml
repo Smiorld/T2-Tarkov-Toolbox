@@ -8,14 +8,12 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
@@ -24,10 +22,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         
-    - name: Build with PyInstaller
-      uses: JackMcKew/pyinstaller-action-windows@main
-      with:
-        spec: main.spec   # 如果你有 spec 文件（可选）
+    - name: Build exe
+      run: |
+        pip install pyinstaller
+        pyinstaller .\main.spec
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
