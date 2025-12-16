@@ -42,7 +42,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='main',
+    name='t2-tarkov-toolbox',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
