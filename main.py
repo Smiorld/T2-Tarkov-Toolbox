@@ -9,16 +9,26 @@ Modules:
 - Quest Tracker: Track and sync quest progress
 """
 
+import sys
 import customtkinter as ctk
 from ui.main_window import MainWindow
+from utils.global_config import get_global_config
+from utils.i18n import get_i18n
 
 
 def main():
-    # Set CustomTkinter appearance
+    # 1. Load global configuration
+    global_config = get_global_config()
+
+    # 2. Initialize i18n system
+    i18n = get_i18n()
+    i18n.set_language(global_config.get_language())
+
+    # 3. Set CustomTkinter appearance
     ctk.set_appearance_mode("Dark")
     ctk.set_default_color_theme("blue")
 
-    # Create and run application
+    # 4. Create and run application
     app = MainWindow()
     app.protocol("WM_DELETE_WINDOW", app.on_closing)
     app.mainloop()

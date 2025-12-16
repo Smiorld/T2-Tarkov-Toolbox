@@ -1,0 +1,318 @@
+{
+  "common": {
+    "confirm": "确认",
+    "cancel": "取消",
+    "save": "保存",
+    "close": "关闭",
+    "browse": "浏览",
+    "success": "成功",
+    "error": "错误",
+    "warning": "警告",
+    "info": "提示",
+    "yes": "是",
+    "no": "否",
+    "image_file": "图片文件"
+  },
+  "main_window": {
+    "title": "T2 Tarkov Toolbox",
+    "restart_prompt": "语言设置已保存！\n\n请手动关闭并重新启动应用以使更改生效。",
+    "restart_title": "需要重启"
+  },
+  "screen_filter": {
+    "title": "屏幕滤镜",
+    "presets": {
+      "default": "默认",
+      "daytime": "白天",
+      "nighttime": "夜间"
+    },
+    "sidebar": {
+      "new_preset": "+ 新建预设",
+      "reset_defaults": "恢复默认预设",
+      "preset_name_prompt": "请输入预设名称:",
+      "delete_confirm": "确定删除此预设吗?"
+    },
+    "controls": {
+      "brightness": "亮度 (Brightness)",
+      "contrast": "对比度 (Contrast)",
+      "gamma": "伽马 (Gamma)",
+      "red": "红色 (Red)",
+      "green": "绿色 (Green)",
+      "blue": "蓝色 (Blue)"
+    },
+    "overlay_compensation": {
+      "title": "悬浮窗对冲",
+      "description": "当悬浮窗和滤镜同时启用时，悬浮窗可能过曝。调整以下参数：",
+      "brightness_offset": "悬浮窗亮度偏移",
+      "gamma_offset": "悬浮窗伽马偏移",
+      "contrast_offset": "悬浮窗对比度偏移"
+    },
+    "hotkeys": {
+      "title": "快捷键设置",
+      "apply": "应用滤镜:",
+      "reset": "重置滤镜:",
+      "placeholder": "点击录制快捷键",
+      "not_set": "未设置",
+      "set_title": "设置快捷键",
+      "set_prompt": "请按下要绑定给 '{preset_name}' 的快捷键..."
+    },
+    "monitors": {
+      "title": "显示器设置",
+      "select": "选择显示器:",
+      "apply_to_all": "应用到所有显示器"
+    },
+    "settings": {
+      "title": "设置",
+      "reset_on_close": "程序关闭时重置滤镜"
+    },
+    "buttons": {
+      "apply": "应用",
+      "reset": "重置"
+    },
+    "messages": {
+      "save_success": "预设、快捷键和显示器配置已保存",
+      "save_failed": "保存失败: {error}",
+      "preset_exists": "预设名称已存在",
+      "invalid_name": "预设名称不能为空",
+      "delete_success": "预设已删除",
+      "hotkey_conflict": "快捷键冲突: {key}",
+      "hotkey_conflict_detail": "快捷键 {key_name} 已被预设 '{conflict_name}' 使用\n请选择其他快捷键",
+      "hotkey_set_success": "快捷键已设置为: {key_name}\n请点击'保存修改'以保存配置",
+      "apply_success": "滤镜已应用",
+      "reset_success": "滤镜已重置",
+      "reset_defaults_confirm": "确定要恢复默认预设吗？\n这将删除所有自定义预设。",
+      "reset_defaults_success": "已恢复默认预设"
+    }
+  },
+  "local_map": {
+    "title": "本地地图配置",
+    "base_map": "大地图",
+    "floor_map": "楼层图",
+    "map_selection": {
+      "select_map": "选择地图:",
+      "select_layer": "选择层级:",
+      "no_map": "请先选择地图"
+    },
+    "sections": {
+      "map_management": "地图管理",
+      "calibration_system": "校准系统",
+      "floor_regions": "楼层区域标记",
+      "view_control": "视图控制",
+      "core_functions": "⚡ 核心功能"
+    },
+    "map_management": {
+      "new_layer": "新建层级",
+      "config_layer_height": "配置层级高度",
+      "delete_layer": "删除层级",
+      "export_map": "导出地图",
+      "import_map_config": "导入地图"
+    },
+    "calibration": {
+      "calibration_mode": "校准模式",
+      "calibration_info": "校准点: {count}/3\n点击地图添加校准点",
+      "calibration_info_with_status": "校准点: {count}/3 ({status})\n点击地图添加校准点",
+      "delete_points": "删除校准点",
+      "mode_active": "校准模式: 在游戏中截图，然后在地图上点击对应位置",
+      "mode_exited": "已退出校准模式",
+      "deletion_mode_active": "删除模式: 点击地图上的校准点来删除",
+      "exit_deletion_mode": "退出删除模式",
+      "calibration_ready": "已完成",
+      "calibration_not_ready": "需要更多点"
+    },
+    "floor_regions": {
+      "title": "楼层区域标记",
+      "hint": "仅用于楼层图\n在大地图上标记激活区域",
+      "mark_region": "标记激活区域",
+      "reset_region": "重置区域标记",
+      "region_info": "区域点: {count} (至少需要3个点)",
+      "current_region_owned": "当前区域 (拥有)\n点数: {count}",
+      "referenced_region": "引用区域: Layer {layer_id}: {owner_name}\n点数: {count}",
+      "current_points": "当前点数: {count}",
+      "marking_mode_active": "区域标记模式: 在大地图上点击标记点\n当前点数: {count} (至少3个点)",
+      "complete_marking": "完成标记",
+      "marking_mode_boundary": "区域标记模式: 在大地图上点击标记区域边界点 (当前{count}个点)",
+      "marking_status": "区域标记模式: 在大地图上点击标记点\n当前点数: {count} ({status})",
+      "marking_summary": "区域标记: 已标记{count}个点 - {status_text}"
+    },
+    "view_control": {
+      "zoom": "缩放:",
+      "reset_view": "重置视图"
+    },
+    "core_functions": {
+      "enable_tracking": "启用位置追踪",
+      "log_monitor_status_off": "日志监控：未启动",
+      "log_monitor_status_on":  "日志监控：已启动",
+      "log_monitor_stopped": "日志监控: 已停止",
+      "show_overlay": "显示悬浮窗",
+      "hide_overlay": "隐藏悬浮窗",
+      "lock_overlay": "锁定悬浮窗",
+      "unlock_overlay": "解锁悬浮窗",
+      "player_centered": "玩家居中",
+      "overlay_hotkey": "显影: {overlay_hotkey}",
+      "overlay_hotkey_not_set": "快捷键: 未设置",
+      "zoom_in_hotkey": "放大: {zoom_in_hotkey}",
+      "zoom_in_hotkey_not_set": "放大: 未设置",
+      "zoom_out_hotkey": "缩小: {zoom_out_hotkey}",
+      "zoom_out_hotkey_not_set": "缩小: 未设置",
+      "hotkey_press_any": "按任意键...",
+      "opacity": "透明度:",
+      "window_size": "窗口:",
+      "width_placeholder": "宽",
+      "height_placeholder": "高",
+      "zoom_step": "缩放步长:",
+      "apply": "应用",
+      "show_btn": "显示",
+      "hide_btn": "隐藏",
+      "lock_btn": "锁定",
+      "unlock_btn": "解锁"
+    },
+    "status": {
+      "please_select_import": "请选择地图并导入地图图片",
+      "no_layer_configured": "该地图尚未配置层级，请先导入地图图片",
+      "map_load_failed": "地图图片加载失败",
+      "map_file_not_exist": "地图图片文件不存在: {path}",
+      "unconfigured": "未配置",
+      "loaded_calibrated": "已加载: {map_name} - {layer_name} (已校准，可启用位置追踪)",
+      "loaded": "已加载: {map_name} - {layer_name}",
+      "tracking_enabled_status": "位置追踪已启用 - 游戏中截图将自动显示位置",
+      "tracking_disabled_status": "位置追踪已禁用",
+      "screenshot_detected": "检测到截图: 坐标 {position}, 高度 {height}m\n自动选择层级: {layer_name} ({layer_type}) - 请在地图上点击对应位置",
+      "coord_transform": "{layer_info} 游戏({game_x},{game_z})→地图({map_x},{map_y}) 朝向{yaw}°",
+      "transform_failed": "检测到截图但坐标转换失败: {error}",
+      "region_saved": "区域绑定已保存",
+      "region_marking_saved": "区域标记已保存",
+      "all_layers_deleted": "所有层级已删除",
+      "layer_deleted": "已删除层级 {layer_id}",
+      "auto_switched_map": "✓ 已自动切换到地图: {map_name}"
+    },
+    "layer_management": {
+      "title": "图层管理",
+      "import_layer": "导入图层",
+      "delete_layer": "删除图层",
+      "layer_type_prompt": "请选择图层类型:",
+      "layer_name_prompt": "请输入图层名称:",
+      "delete_confirm": "确定删除图层 '{layer_name}' 吗？"
+    },
+    "overlay": {
+      "title": "悬浮窗设置",
+      "toggle": "显示/隐藏悬浮窗",
+      "opacity": "不透明度:",
+      "scale": "缩放比例:",
+      "auto_detect": "自动检测位置"
+    },
+    "screenshot_monitor": {
+      "title": "截图监控",
+      "toggle": "启用截图监控",
+      "status_monitoring": "状态: 监控中...",
+      "status_stopped": "状态: 已停止"
+    },
+    "messages": {
+      "config_saved": "地图配置已保存",
+      "import_success": "成功导入 {layer_type} 图层: {layer_name}",
+      "import_map_success": "{layer_type}已导入: {layer_name}",
+      "import_failed": "导入图层失败: {error}",
+      "import_map_failed": "导入地图图片失败: {error}",
+      "delete_success": "图层已删除",
+      "layer_config_updated": "层级配置已更新",
+      "no_layer_selected": "请先选择层级",
+      "no_map_selected": "请先选择地图",
+      "select_map_image": "选择地图图片",
+      "select_configure_map": "请先选择并配置地图",
+      "layer_not_calibrated": "当前地图层级尚未校准，请先完成校准",
+      "invalid_layer_name": "图层名称不能为空",
+      "screenshot_path_not_set": "截图路径未配置，请在全局设置中配置",
+      "screenshot_folder_not_exist": "截图文件夹不存在:\n{path}\n\n请确认游戏已运行过至少一次",
+      "tracking_enabled": "位置追踪已启用 - 游戏中截图将自动显示位置",
+      "tracking_disabled": "位置追踪已禁用",
+      "overlay_shown": "悬浮窗已显示",
+      "overlay_hidden": "悬浮窗已隐藏",
+      "no_screenshot": "请先在游戏中截图",
+      "confirm_delete_calibration_point_message": "是否删除此校准点?\n\n标记编号: {marker_label}\n游戏坐标: ({game_x}, {game_z})\n地图坐标: ({map_x}, {map_y})\n标注时间: {timestamp}\n点击距离: {distance} 像素",
+      "calibration_point_enough": "已添加{count}个校准点！\n现在可以关闭校准模式进行测试",
+      "clear_calibration_confirm": "是否删除所有校准点?",
+      "calibration_cleared": "已清除所有校准点",
+      "clibration_point_deleted": "已删除校准点\n游戏坐标: ({game_x}, {game_z})",
+      "no_calibration_point_nearby": "附近没有校准点\n(最大搜索距离: 20 像素)",
+      "cannot_mark_base_map": "大地图不需要标记区域\n区域标记仅用于楼层图",
+      "no_base_map_configured": "该地图尚未导入大地图\n请先导入大地图",
+      "base_map_not_exist": "大地图文件不存在: {base_map_path}",
+      "region_points_not_enough":"至少需要3个点来定义区域",
+      "region_sharing_warning": "此操作会影响以下楼层：\n{layer_list}\n\n是否继续？",
+      "region_overlap_error": "区域重合",
+      "region_overlap_warning": "检测到区域重合！\n\n该区域属于: Layer {owner_layer_id}: {owner_layer_name}\n\n是否复用该区域？\n是：绑定到该区域\n否：取消本次标记",
+      "region_bound": "已绑定到 Layer {owner_layer_id}: {owner_layer_name} 的区域",
+      "region_cancel": "区域标记已取消",
+      "region_saved": "区域标记已保存\n包含{count}个边界点",
+      "layer_has_no_region": "当前层级没有区域绑定",
+      "unbind_region_confirm": "当前层级引用了 {owner_info} 的区域\n\n是否解除绑定？",
+      "region_unbound_success": "区域绑定已重置",
+      "select_layer_first": "请先选择层级",
+      "cannot_delete_base_map": "不能删除大地图（基础层）",
+      "delete_layer_confirm": "确定要删除以下层级吗？\n\nLayer {layer_id}: {layer_name}\n\n",
+      "region_owner_deletion_warning": "此层级是区域母层级，以下楼层引用了它的区域：\n{layer_list}\n\n删除后，这些楼层的区域绑定将被清除。\n\n",
+      "irreversible_action_warning": "警告：此操作将同时删除该层级的所有校准点和区域数据，且无法撤销！",
+      "delete_layer_title": "确认删除",
+      "layer_deleted_detail": "层级 {layer_id}: {layer_name} 已删除",
+      "deletion_failed": "删除失败",
+      "unknown_error": "未知错误",
+      "settings_updated": "路径配置已更新",
+      "select_map_and_layer": "请先选择地图和层级",
+      "map_image_not_exist": "地图图片不存在",
+      "window_size_too_small": "窗口尺寸不能小于200x200",
+      "zoom_step_invalid": "缩放步进值无效: {error}",
+      "settings_applied": "设置已应用",
+      "invalid_number": "请输入有效的数字",
+      "set_zoom_in_hotkey_prompt": "请按下要设置为'放大'的快捷键",
+      "set_zoom_out_hotkey_prompt": "请按下要设置为'缩小'的快捷键",
+      "overlay_hotkey_set_success": "显隐快捷键已设置为: {key_name}",
+      "zoom_in_hotkey_set_success": "放大快捷键已设置为: {key_name}",
+      "zoom_out_hotkey_set_success": "缩小快捷键已设置为: {key_name}",
+      "select_export_map": "请先选择要导出的地图",
+      "map_config_not_exist": "地图配置不存在",
+      "export_success": "地图配置已导出到:\n{filename}\n\n包含 {layer_count} 个层级",
+      "export_failed": "导出失败: {error}",
+      "invalid_map_package": "无效的地图配置包：缺少config.json",
+      "import_failed_detail": "导入失败: {error}",
+      "enter_layer_name": "请输入层级名称",
+      "height_min_max_error": "最小高度必须小于最大高度",
+      "invalid_number_value": "请输入有效的数值",
+      "enter_screenshot_path": "请输入截图文件夹路径",
+      "export_map_config_title": "导出地图配置",
+      "import_map_config_title": "导入地图配置",
+      "select_screenshot_folder": "选择截图文件夹",
+      "select_log_folder": "选择日志文件夹"
+    }
+  },
+  "global_settings": {
+    "title": "全局设置",
+    "subtitle": "配置应用程序的全局参数",
+    "sections": {
+      "paths": "路径配置",
+      "language": "语言设置"
+    },
+    "paths": {
+      "screenshots": "截图文件夹:",
+      "logs": "日志文件夹:",
+      "placeholder_screenshots": "塔科夫截图文件夹路径",
+      "placeholder_logs": "塔科夫日志文件夹路径",
+      "auto_detect": "自动检测",
+      "browse": "浏览",
+      "help_text": "截图文件夹：塔科夫游戏截图保存位置（通常在 文档/Escape from Tarkov）\n日志文件夹：塔科夫游戏日志位置（通常在游戏安装目录下的 Logs 文件夹）\n\n这些路径用于本地地图模块的位置追踪功能。"
+    },
+    "language": {
+      "current": "当前语言:",
+      "chinese": "中文",
+      "english": "English"
+    },
+    "buttons": {
+      "save": "保存设置",
+      "reset": "重置为默认值"
+    },
+    "messages": {
+      "save_success": "设置已保存并应用到所有模块",
+      "save_failed": "保存设置失败: {error}",
+      "auto_detect_success": "自动检测到路径:\n截图: {screenshots}\n日志: {logs}",
+      "auto_detect_failed": "未能自动检测到塔科夫目录",
+      "invalid_path": "路径无效: {path}"
+    }
+  }
+}

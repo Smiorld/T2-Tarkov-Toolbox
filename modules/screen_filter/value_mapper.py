@@ -18,14 +18,13 @@ class ValueMapper:
     RGB_UI_RANGE = (0, 255)            # 0-255 scale: 0% to 100%
 
     # Algorithm Ranges (internal)
-    # Based on industry standards (FFmpeg, Gamma Panel, NVIDIA Freestyle)
-    # References:
-    # - FFmpeg eq filter: brightness ±1.0, contrast ±2.0, gamma 0.1-10.0
-    # - Gamma Panel: brightness ±1.0, contrast 0.1-3.0, gamma 0.3-4.4
-    # - NVIDIA Freestyle: typically uses ±40% for adjustments
-    BRIGHTNESS_ALGO_RANGE = (-0.5, 0.5)   # Conservative ±50% (within FFmpeg's ±1.0)
-    GAMMA_ALGO_RANGE = (0.5, 3.0)         # Reduced upper bound for safety
-    CONTRAST_ALGO_RANGE = (-0.5, 0.5)     # Conservative ±50% (within FFmpeg's ±2.0)
+    # Based on real-world testing against reference filter software
+    # Testing showed: UI brightness 37 ≈ Reference software brightness 55
+    #                 UI contrast 4 ≈ Reference software contrast 22
+    # This means our mapping was TOO SENSITIVE, need SMALLER ranges for finer control
+    BRIGHTNESS_ALGO_RANGE = (-0.35, 0.35)  # Reduced range for finer per-step control
+    GAMMA_ALGO_RANGE = (0.5, 3.0)          # Keep existing gamma range (works well)
+    CONTRAST_ALGO_RANGE = (-0.3, 0.3)      # Reduced range for finer per-step control
     RGB_ALGO_RANGE = (0.0, 1.0)           # Normalized 0-100%
 
     @classmethod

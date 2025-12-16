@@ -1,6 +1,7 @@
 import json
 from typing import List, Optional
 from modules.screen_filter.models import FilterPreset, FilterConfig
+from utils.i18n import t
 
 class PresetManager:
     def __init__(self, config_file: str = "filter_presets.json"):
@@ -63,16 +64,16 @@ class PresetManager:
         self.save_presets()
 
     def _create_default_presets(self) -> List[FilterPreset]:
-        """Create default presets with safe algorithm values"""
+        """Create default presets with user-calibrated algorithm values"""
         return [
             FilterPreset(
                 id="default",
-                name="默认",
+                name=t("screen_filter.presets.default"),
                 hotkey="F2",
                 config=FilterConfig(
-                    brightness=0.0,    # 0% brightness (neutral)
-                    gamma=1.0,         # Linear gamma
-                    contrast=0.0,      # 0% contrast (neutral)
+                    brightness=0.0,    # UI: 0 (neutral)
+                    gamma=1.0,         # UI: 1.0 (linear gamma)
+                    contrast=0.0,      # UI: 0 (neutral)
                     red_scale=1.0,
                     green_scale=1.0,
                     blue_scale=1.0
@@ -81,12 +82,12 @@ class PresetManager:
             ),
             FilterPreset(
                 id="daytime",
-                name="白天",
+                name=t("screen_filter.presets.daytime"),
                 hotkey="F3",
                 config=FilterConfig(
-                    brightness=0.03,   # +3% brightness
-                    gamma=1.5,         # Slightly darken brights
-                    contrast=0.05,     # +5% contrast
+                    brightness=0.0315,  # UI: ~9 (calibrated for daytime use)
+                    gamma=1.5,          # UI: 1.5 (slightly darken brights)
+                    contrast=0.048,     # UI: ~8 (subtle contrast boost)
                     red_scale=1.0,
                     green_scale=1.0,
                     blue_scale=1.0
@@ -95,12 +96,12 @@ class PresetManager:
             ),
             FilterPreset(
                 id="nighttime",
-                name="夜间",
+                name=t("screen_filter.presets.nighttime"),
                 hotkey="F4",
                 config=FilterConfig(
-                    brightness=0.45,   # +45% brightness (within safe range of ±60%)
-                    gamma=1.95,        # Lighten darks significantly
-                    contrast=0.15,     # +15% contrast (within safe range of ±25%)
+                    brightness=0.1855,  # UI: ~53 (calibrated for night visibility)
+                    gamma=1.95,         # UI: 1.95 (lighten darks significantly)
+                    contrast=0.042,     # UI: ~7 (balanced contrast)
                     red_scale=1.0,
                     green_scale=1.0,
                     blue_scale=1.0

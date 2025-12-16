@@ -10,6 +10,11 @@ class FilterConfig:
     green_scale: float = 1.0
     blue_scale: float = 1.0
 
+    # 悬浮窗对冲设置（防止过曝）
+    overlay_brightness_offset: float = 0.0  # 悬浮窗额外亮度偏移
+    overlay_gamma_offset: float = 0.0       # 悬浮窗额外伽马偏移
+    overlay_contrast_offset: float = 0.0    # 悬浮窗额外对比度偏移
+
     def to_dict(self):
         return asdict(self)
 
@@ -22,6 +27,9 @@ class FilterConfig:
             red_scale=data.get("red_scale", 1.0),
             green_scale=data.get("green_scale", 1.0),
             blue_scale=data.get("blue_scale", 1.0),
+            overlay_brightness_offset=data.get("overlay_brightness_offset", 0.0),
+            overlay_gamma_offset=data.get("overlay_gamma_offset", 0.0),
+            overlay_contrast_offset=data.get("overlay_contrast_offset", 0.0),
         )
 
 @dataclass

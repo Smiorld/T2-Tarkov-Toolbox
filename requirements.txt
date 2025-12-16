@@ -2,3 +2,6 @@ customtkinter
 pywin32
 keyboard
 screeninfo
+Pillow
+numpy
+watchdog

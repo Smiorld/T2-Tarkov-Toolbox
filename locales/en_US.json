@@ -1,0 +1,318 @@
+{
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "browse": "Browse",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info",
+    "yes": "Yes",
+    "no": "No",
+    "image_file": "Image file"
+  },
+  "main_window": {
+    "title": "T2 Tarkov Toolbox",
+    "restart_prompt": "Language setting saved!\n\nPlease manually close and restart the application for changes to take effect.",
+    "restart_title": "Restart Required"
+  },
+  "screen_filter": {
+    "title": "Screen Filter",
+    "presets": {
+      "default": "Default",
+      "daytime": "Daytime",
+      "nighttime": "Nighttime"
+    },
+    "sidebar": {
+      "new_preset": "+ New Preset",
+      "reset_defaults": "Reset to Defaults",
+      "preset_name_prompt": "Enter preset name:",
+      "delete_confirm": "Are you sure you want to delete this preset?"
+    },
+    "controls": {
+      "brightness": "Brightness",
+      "contrast": "Contrast",
+      "gamma": "Gamma",
+      "red": "Red",
+      "green": "Green",
+      "blue": "Blue"
+    },
+    "overlay_compensation": {
+      "title": "Overlay Compensation",
+      "description": "When overlay and filter are both active, overlay may be overexposed. Adjust these:",
+      "brightness_offset": "Overlay Brightness Offset",
+      "gamma_offset": "Overlay Gamma Offset",
+      "contrast_offset": "Overlay Contrast Offset"
+    },
+    "hotkeys": {
+      "title": "Hotkey Settings",
+      "apply": "Apply Filter:",
+      "reset": "Reset Filter:",
+      "placeholder": "Click to record hotkey",
+      "not_set": "Not Set",
+      "set_title": "Set Hotkey",
+      "set_prompt": "Press the hotkey to bind to '{preset_name}'..."
+    },
+    "monitors": {
+      "title": "Monitor Settings",
+      "select": "Select Monitor:",
+      "apply_to_all": "Apply to All Monitors"
+    },
+    "settings": {
+      "title": "Settings",
+      "reset_on_close": "Reset filters when application closes"
+    },
+    "buttons": {
+      "apply": "Apply",
+      "reset": "Reset"
+    },
+    "messages": {
+      "save_success": "Preset, hotkeys, and monitor settings saved",
+      "save_failed": "Save failed: {error}",
+      "preset_exists": "Preset name already exists",
+      "invalid_name": "Preset name cannot be empty",
+      "delete_success": "Preset deleted",
+      "hotkey_conflict": "Hotkey conflict: {key}",
+      "hotkey_conflict_detail": "Hotkey {key_name} is already used by preset '{conflict_name}'\nPlease select another hotkey",
+      "hotkey_set_success": "Hotkey has been set to: {key_name}\nPlease click 'Save Changes' to save the configuration",
+      "apply_success": "Filter applied",
+      "reset_success": "Filter reset",
+      "reset_defaults_confirm": "Are you sure you want to reset to default presets?\nThis will delete all custom presets.",
+      "reset_defaults_success": "Default presets restored"
+    }
+  },
+  "local_map": {
+    "title": "Local Map Configuration",
+    "base_map": "Big Map",
+    "floor_map": "Floor Map",
+    "map_selection": {
+      "select_map": "Select Map:",
+      "select_layer": "Select Layer:",
+      "no_map": "Please select a map first"
+    },
+    "sections": {
+      "map_management": "Map Management",
+      "calibration_system": "Calibration System",
+      "floor_regions": "Floor Region Marking",
+      "view_control": "View Control",
+      "core_functions": "⚡ Core Functions"
+    },
+    "map_management": {
+      "new_layer": "New Layer",
+      "config_layer_height": "Configure Layer Height",
+      "delete_layer": "Delete Layer",
+      "export_map": "Export Map",
+      "import_map_config": "Import Map"
+    },
+    "calibration": {
+      "calibration_mode": "Calibration Mode",
+      "calibration_info": "Calibration Points: {count}/3\nClick on the map to add calibration points",
+      "calibration_info_with_status": "Calibration Points: {count}/3 ({status})\nClick on the map to add calibration points",
+      "delete_points": "Delete Calibration Points",
+      "mode_active": "Calibration Mode: Take a screenshot in the game,\n then click the corresponding position on the map",
+      "mode_exited": "Exited calibration mode",
+      "deletion_mode_active": "Deletion Mode: Click on calibration points\non the map to delete them",
+      "exit_deletion_mode": "Exit Deletion Mode",
+      "calibration_ready": "Calibrated",
+      "calibration_not_ready": "Need More Points"
+    },
+    "floor_regions": {
+      "title": "Floor Region Marking",
+      "hint": "Only for floor maps\nMark activation regions on the large map",
+      "mark_region": "Mark Activation Region",
+      "reset_region": "Reset Region Marking",
+      "region_info": "Region Points: {count} (at least 3 points required)",
+      "current_region_owned": "Current Region (Owned)\nPoints: {count}",
+      "referenced_region": "Referenced Region: Layer {layer_id}: {owner_name}\nPoints: {count}",
+      "current_points": "Current Points: {count}",
+      "marking_mode_active": "Region Marking Mode: Click on the large map to mark points\nCurrent Points: {count} (at least 3 points required)",
+      "complete_marking": "Complete Marking",
+      "marking_mode_boundary": "Region Marking Mode: Click to mark region boundary points on the large map (currently {count} points)",
+      "marking_status": "Region Marking Mode: Click to mark points on the large map\nCurrent Points: {count} ({status})",
+      "marking_summary": "Region Marking: Marked {count} points - {status_text}"
+    },
+    "view_control": {
+      "zoom": "Zoom:",
+      "reset_view": "Reset View"
+    },
+    "core_functions": {
+      "enable_tracking": "Enable Position Tracking",
+      "log_monitor_status_off": "Log Monitor Status: Off",
+      "log_monitor_status_on": "Log Monitor Status: On",
+      "log_monitor_stopped": "Log Monitor: Stopped",
+      "show_overlay": "Show Overlay Window",
+      "hide_overlay": "Hide Overlay Window",
+      "lock_overlay": "Lock Overlay Window",
+      "unlock_overlay": "Unlock Overlay Window",
+      "player_centered": "Center on Player",
+      "overlay_hotkey": "Overlay Hotkey: {overlay_hotkey}",
+      "overlay_hotkey_not_set": "Overlay Hotkey: Not Set",
+      "zoom_in_hotkey": "Zoom In Hotkey: {zoom_in_hotkey}",
+      "zoom_in_hotkey_not_set": "Zoom In Hotkey: Not Set",
+      "zoom_out_hotkey": "Zoom Out Hotkey: {zoom_out_hotkey}",
+      "zoom_out_hotkey_not_set": "Zoom Out Hotkey: Not Set",
+      "hotkey_press_any": "Press any key...",
+      "opacity": "Opacity:",
+      "window_size": "Window:",
+      "width_placeholder": "Width",
+      "height_placeholder": "Height",
+      "zoom_step": "Zoom Step:",
+      "apply": "Apply",
+      "show_btn": "Show",
+      "hide_btn": "Hide",
+      "lock_btn": "Lock",
+      "unlock_btn": "Unlock"
+    },
+    "status": {
+      "please_select_import": "Please select a map and import a map image",
+      "no_layer_configured": "The map has not been configured with layers, please import a map image first",
+      "map_load_failed": "Failed to load map image",
+      "map_file_not_exist": "Map image file does not exist: {path}",
+      "unconfigured": "Not Configured",
+      "loaded_calibrated": "Loaded: {map_name} - {layer_name} (Calibrated, position tracking can be enabled)",
+      "loaded": "Loaded: {map_name} - {layer_name}",
+      "tracking_enabled_status": "Position tracking enabled - screenshots in game will automatically show position",
+      "tracking_disabled_status": "Position tracking disabled",
+      "screenshot_detected": "Screenshot detected: Position {position}, Height {height}m\nAuto-selected layer: {layer_name} ({layer_type}) - Click the corresponding position on the map",
+      "coord_transform": "{layer_info} Game({game_x},{game_z})→Map({map_x},{map_y}) Direction{yaw}°",
+      "transform_failed": "Screenshot detected but coordinate transformation failed: {error}",
+      "region_saved": "Region binding saved",
+      "region_marking_saved": "Region marking saved",
+      "all_layers_deleted": "All layers deleted",
+      "layer_deleted": "Deleted layer {layer_id}",
+      "auto_switched_map": "✓ Automatically switched to map: {map_name}"
+    },
+    "layer_management": {
+      "title": "Layer Management",
+      "import_layer": "Import Layer",
+      "delete_layer": "Delete Layer",
+      "layer_type_prompt": "Select layer type:",
+      "layer_name_prompt": "Enter layer name:",
+      "delete_confirm": "Are you sure you want to delete layer '{layer_name}'?"
+    },
+    "overlay": {
+      "title": "Overlay Settings",
+      "toggle": "Show/Hide Overlay",
+      "opacity": "Opacity:",
+      "scale": "Scale:",
+      "auto_detect": "Auto Detect Position"
+    },
+    "screenshot_monitor": {
+      "title": "Screenshot Monitor",
+      "toggle": "Enable Screenshot Monitoring",
+      "status_monitoring": "Status: Monitoring...",
+      "status_stopped": "Status: Stopped"
+    },
+    "messages": {
+      "config_saved": "Map configuration saved",
+      "import_success": "Successfully imported {layer_type} layer: {layer_name}",
+      "import_map_success": "{layer_type} imported: {layer_name}",
+      "import_failed": "Failed to import layer: {error}",
+      "import_map_failed": "Failed to import map image: {error}",
+      "delete_success": "Layer deleted",
+      "layer_config_updated": "Layer configuration updated",
+      "no_layer_selected": "Please select a layer first",
+      "no_map_selected": "Please select a map first",
+      "select_map_image": "Select map image",
+      "select_configure_map": "Please select and configure a map first",
+      "layer_not_calibrated": "The current map layer has not been calibrated, please complete calibration first",
+      "invalid_layer_name": "Layer name cannot be empty",
+      "screenshot_path_not_set": "Screenshot path not configured, please set it in Global Settings",
+      "screenshot_folder_not_exist": "Screenshots folder does not exist:\n{path}\n\nPlease confirm the game has run at least once",
+      "tracking_enabled": "Position tracking enabled - screenshots in game will automatically show position",
+      "tracking_disabled": "Position tracking disabled",
+      "overlay_shown": "Overlay shown",
+      "overlay_hidden": "Overlay hidden",
+      "no_screenshot": "Please take a screenshot first",
+      "confirm_delete_calibration_point_message": "Are you sure you want to delete this calibration point?\n\nMarker Label: {marker_label}\nGame Position: ({game_x}, {game_z})\nMap Position: ({map_x}, {map_y})\nTimestamp: {timestamp}\nClick Distance: {distance} pixels",
+      "calibration_point_enough": "You have added {count} calibration points.\nYou can now exit calibration mode to test",
+      "clear_calibration_confirm": "Are you sure you want to delete all calibration points?",
+      "calibration_cleared": "All calibration points have been cleared",
+      "clibration_point_deleted": "Calibration point deleted\nGame Position: ({game_x}, {game_z})",
+      "no_calibration_point_nearby": "No calibration points nearby\n(Maximum search distance: 20 pixels)",
+      "cannot_mark_base_map": "Big map does not need to mark regions\nRegion marking is only used for layer",
+      "no_base_map_configured": "This map has not been imported as base map\nPlease import base map first",
+      "base_map_not_exist": "Base map file does not exist: {base_map_path}",
+      "region_points_not_enough": "You need at least 3 points to define a region",
+      "region_sharing_warning": "This operation will affect the following layers:\n{layer_list}\n\nAre you sure you want to continue?",
+      "region_overlap_error": "Region overlap detected",
+      "region_overlap_warning": "Region overlap detected!\n\nThis region belongs to layer {owner_layer_id}: {owner_layer_name}\n\nDo you want to reuse this region?\nYes: Bind to this region\nNo: Cancel this operation",
+      "region_bound": "Region bound to layer {owner_layer_id}: {owner_layer_name}",
+      "region_cancel": "Region marking cancelled",
+      "region_saved": "Region marking saved\nContains {count} boundary points",
+      "layer_has_no_region": "Current layer has no region bound",
+      "unbind_region_confirm": "Current layer references the region from {owner_info}\n\nDo you want to unbind it?",
+      "region_unbound_success": "Region binding has been reset",
+      "select_layer_first": "Please select a layer first",
+      "cannot_delete_base_map": "Cannot delete the base map (ground floor)",
+      "delete_layer_confirm": "Are you sure you want to delete the following layer?\n\nLayer {layer_id}: {layer_name}\n\n",
+      "region_owner_deletion_warning": "This layer is a region owner layer, and the following floors reference its region:\n{layer_list}\n\nAfter deletion, the region bindings of these floors will be cleared.\n\n",
+      "irreversible_action_warning": "Warning: This operation will also delete all calibration points and region data for this layer, and cannot be undone!",
+      "delete_layer_title": "Confirm Deletion",
+      "layer_deleted_detail": "Layer {layer_id}: {layer_name} has been deleted",
+      "deletion_failed": "Deletion Failed",
+      "unknown_error": "Unknown error",
+      "settings_updated": "Path configuration has been updated",
+      "select_map_and_layer": "Please select map and layer first",
+      "map_image_not_exist": "Map image does not exist",
+      "window_size_too_small": "Window size cannot be smaller than 200x200",
+      "zoom_step_invalid": "Zoom step value is invalid: {error}",
+      "settings_applied": "Settings have been applied",
+      "invalid_number": "Please enter valid numbers",
+      "set_zoom_in_hotkey_prompt": "Please press the hotkey you want to set for 'Zoom In'",
+      "set_zoom_out_hotkey_prompt": "Please press the hotkey you want to set for 'Zoom Out'",
+      "overlay_hotkey_set_success": "Overlay hotkey has been set to: {key_name}",
+      "zoom_in_hotkey_set_success": "Zoom in hotkey has been set to: {key_name}",
+      "zoom_out_hotkey_set_success": "Zoom out hotkey has been set to: {key_name}",
+      "select_export_map": "Please select a map to export first",
+      "map_config_not_exist": "Map configuration does not exist",
+      "export_success": "Map configuration has been exported to:\n{filename}\n\nContains {layer_count} layers",
+      "export_failed": "Export failed: {error}",
+      "invalid_map_package": "Invalid map package: missing config.json",
+      "import_failed_detail": "Import failed: {error}",
+      "enter_layer_name": "Please enter a layer name",
+      "height_min_max_error": "Minimum height must be less than maximum height",
+      "invalid_number_value": "Please enter valid numeric values",
+      "enter_screenshot_path": "Please enter screenshot folder path",
+      "export_map_config_title": "Export Map Configuration",
+      "import_map_config_title": "Import Map Configuration",
+      "select_screenshot_folder": "Select Screenshot Folder",
+      "select_log_folder": "Select Log Folder"
+    }
+  },
+  "global_settings": {
+    "title": "Global Settings",
+    "subtitle": "Configure application-wide parameters",
+    "sections": {
+      "paths": "Path Configuration",
+      "language": "Language Settings"
+    },
+    "paths": {
+      "screenshots": "Screenshot Folder:",
+      "logs": "Logs Folder:",
+      "placeholder_screenshots": "Tarkov screenshot folder path",
+      "placeholder_logs": "Tarkov logs folder path",
+      "auto_detect": "Auto Detect",
+      "browse": "Browse",
+      "help_text": "Screenshot folder: Location where Tarkov game screenshots are saved (usually in Documents/Escape from Tarkov)\nLogs folder: Location of Tarkov game logs (usually in the Logs folder under the game installation directory)\n\nThese paths are used for the position tracking functionality of the local map module."
+    },
+    "language": {
+      "current": "Current Language:",
+      "chinese": "中文",
+      "english": "English"
+    },
+    "buttons": {
+      "save": "Save Settings",
+      "reset": "Reset to Defaults"
+    },
+    "messages": {
+      "save_success": "Settings saved and applied to all modules",
+      "save_failed": "Failed to save settings: {error}",
+      "auto_detect_success": "Auto-detected paths:\nScreenshots: {screenshots}\nLogs: {logs}",
+      "auto_detect_failed": "Could not auto-detect Tarkov directory",
+      "invalid_path": "Invalid path: {path}"
+    }
+  }
+}

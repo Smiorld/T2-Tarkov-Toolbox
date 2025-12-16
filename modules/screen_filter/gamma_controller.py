@@ -2,7 +2,9 @@ import ctypes
 from ctypes import wintypes
 import math
 from typing import List, Tuple, Dict
+from screeninfo import get_monitors
 from modules.screen_filter.models import FilterConfig
+from utils.i18n import get_current_language
 
 # Windows API Constants and Types
 HDC = wintypes.HANDLE
@@ -63,20 +65,54 @@ class GammaController:
         self.monitors = self._enumerate_monitors()
 
     def _enumerate_monitors(self) -> List[Dict[str, str]]:
+        """Enumerate all monitors with enhanced metadata"""
         monitors = []
+
+        # Get current language setting
+        lang = get_current_language()
+
+        # Get screeninfo data for friendly names
+        # Use list instead of dict to match by index
+        screeninfo_list = []
+        try:
+            screeninfo_monitors = get_monitors()
+            screeninfo_list = list(screeninfo_monitors)
+        except Exception as e:
+            print(f"[GammaController] Warning: Failed to get screeninfo data: {e}")
 
         def callback(hMonitor, hdcMonitor, lprcMonitor, dwData):
             mi = MONITORINFOEX()
             mi.cbSize = ctypes.sizeof(MONITORINFOEX)
             if user32.GetMonitorInfoW(hMonitor, ctypes.byref(mi)):
-                device_name = mi.szDevice
-                # Create a DC for this specific monitor device to control its gamma
-                # Note: We store the device name to create DC later when applying, 
-                # or we could store the hMonitor but SetDeviceGammaRamp needs an HDC.
-                # Creating a DC for the specific device name is the robust way.
+                device_name = mi.szDevice  # e.g., "\\.\DISPLAY1"
+
+                # Get screeninfo data by matching index
+                # Windows enumerates monitors in the same order as screeninfo
+                monitor_index = len(monitors)
+                screeninfo_data = screeninfo_list[monitor_index] if monitor_index < len(screeninfo_list) else None
+
+                # Generate friendly name based on language
+                if screeninfo_data:
+                    if screeninfo_data.is_primary:
+                        if lang == "zh_CN":
+                            friendly_name = f"主显示器 ({screeninfo_data.width}x{screeninfo_data.height})"
+                        else:
+                            friendly_name = f"Primary Monitor ({screeninfo_data.width}x{screeninfo_data.height})"
+                    else:
+                        if lang == "zh_CN":
+                            friendly_name = f"显示器{monitor_index + 1} ({screeninfo_data.width}x{screeninfo_data.height})"
+                        else:
+                            friendly_name = f"Monitor {monitor_index + 1} ({screeninfo_data.width}x{screeninfo_data.height})"
+                else:
+                    # Fallback if screeninfo doesn't have data
+                    if lang == "zh_CN":
+                        friendly_name = f"显示器 {monitor_index + 1}"
+                    else:
+                        friendly_name = f"Monitor {monitor_index + 1}"
+
                 monitors.append({
                     "device_name": device_name,
-                    "name": f"Monitor {len(monitors) + 1} ({device_name})" 
+                    "name": friendly_name
                 })
             return True
 

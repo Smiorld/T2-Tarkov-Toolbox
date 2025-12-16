@@ -38,3 +38,16 @@ nul
 filter_presets.json
 *.db
 *.sqlite
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# User-specific runtime configurations
+config/app_config.json
+config/filter_config.json
+
+# Test data - user's personal map data and images
+assetsmaps/
+map_config.json
+map_function_config.json
+assets/maps/
