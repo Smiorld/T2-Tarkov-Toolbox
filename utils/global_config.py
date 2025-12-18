@@ -153,6 +153,70 @@ class GlobalConfig:
             self._notify_change('language', language)
             print(f"[全局配置] 语言已更新: {old_lang} -> {language}")
 
+    # ========== 通用配置存储 ==========
+
+    def get(self, key: str, default=None):
+        """
+        获取配置值
+
+        Args:
+            key: 配置键名
+            default: 如果键不存在时返回的默认值
+
+        Returns:
+            配置值或默认值
+        """
+        # 从文件读取以获取所有键（包括额外的键）
+        if not self.config_file.exists():
+            return default
+
+        try:
+            with open(self.config_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get(key, default)
+        except Exception as e:
+            print(f"[全局配置] 读取配置键失败 {key}: {e}")
+            return default
+
+    def set(self, key: str, value, save: bool = True):
+        """
+        设置配置值
+
+        Args:
+            key: 配置键名
+            value: 要设置的值
+            save: 是否立即保存到文件
+        """
+        if not save:
+            # 仅更新内存（用于批量更新）
+            return
+
+        try:
+            # 确保配置目录存在
+            self.config_dir.mkdir(exist_ok=True)
+
+            # 加载现有配置
+            data = {}
+            if self.config_file.exists():
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+            # 更新键值
+            data[key] = value
+
+            # 同步当前实例变量
+            data['screenshots_path'] = self.screenshots_path
+            data['logs_path'] = self.logs_path
+            data['language'] = self.language
+
+            # 保存回文件
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+
+            print(f"[全局配置] 已保存配置键: {key} = {value}")
+        except Exception as e:
+            print(f"[全局配置] 保存配置键失败 {key}: {e}")
+
     # ========== 回调机制 ==========
 
     def on_config_change(self, callback: Callable[[str, str], None]):

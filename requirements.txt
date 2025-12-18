@@ -5,3 +5,5 @@ screeninfo
 Pillow
 numpy
 watchdog
+requests
+packaging

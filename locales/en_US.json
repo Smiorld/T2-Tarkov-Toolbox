@@ -16,7 +16,18 @@
   "main_window": {
     "title": "T2 Tarkov Toolbox",
     "restart_prompt": "Language setting saved!\n\nPlease manually close and restart the application for changes to take effect.",
-    "restart_title": "Restart Required"
+    "restart_title": "Restart Required",
+    "version_check": {
+      "button": "Check Updates",
+      "update_link": "({version}!)",
+      "available_title": "New Version Available",
+      "available": "New version {version} is available!\n\nClick the red version number in the toolbar to visit the download page.",
+      "latest_title": "Up to Date",
+      "latest": "You're using the latest version!",
+      "error_title": "Update Check Failed",
+      "error": "Failed to check for updates: {error}\n\nPlease check your network connection or try again later.",
+      "checking": "Checking for updates..."
+    }
   },
   "screen_filter": {
     "title": "Screen Filter",
