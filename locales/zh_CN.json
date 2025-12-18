@@ -29,7 +29,11 @@
       "new_preset": "+ 新建预设",
       "reset_defaults": "恢复默认预设",
       "preset_name_prompt": "请输入预设名称:",
-      "delete_confirm": "确定删除此预设吗?"
+      "delete_confirm": "确定删除此预设吗?",
+      "delete_preset": "删除预设",
+      "delete_preset_mode": "删除预设模式",
+      "exit_delete_mode": "退出删除模式",
+      "cannot_delete_default": "无法删除默认预设"
     },
     "controls": {
       "brightness": "亮度 (Brightness)",

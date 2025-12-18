@@ -29,7 +29,11 @@
       "new_preset": "+ New Preset",
       "reset_defaults": "Reset to Defaults",
       "preset_name_prompt": "Enter preset name:",
-      "delete_confirm": "Are you sure you want to delete this preset?"
+      "delete_confirm": "Are you sure you want to delete this preset?",
+      "delete_preset": "Delete Preset",
+      "delete_preset_mode": "Delete Preset Mode",
+      "exit_delete_mode": "Exit Delete Mode",
+      "cannot_delete_default": "Cannot delete default preset"
     },
     "controls": {
       "brightness": "Brightness",

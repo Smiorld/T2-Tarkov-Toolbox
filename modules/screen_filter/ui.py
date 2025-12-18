@@ -30,6 +30,7 @@ class ScreenFilterUI(ctk.CTkFrame):
         self.validation_warning_label = None  # Will be created in main area
         self.waiting_for_hotkey = None  # Preset waiting for hotkey assignment
         self.get_overlay_window = None  # Callback to get overlay window reference
+        self.delete_mode = False  # Delete mode flag
 
         # Layout
         self.grid_columnconfigure(1, weight=1)
@@ -63,7 +64,7 @@ class ScreenFilterUI(ctk.CTkFrame):
     def _create_sidebar(self):
         self.sidebar_frame = ctk.CTkFrame(self, width=250, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(2, weight=1)
+        self.sidebar_frame.grid_rowconfigure(3, weight=1)  # preset_list_frame now at row 3
 
         self.title_label = ctk.CTkLabel(
             self.sidebar_frame,
@@ -77,13 +78,22 @@ class ScreenFilterUI(ctk.CTkFrame):
             text=t("screen_filter.sidebar.new_preset"),
             command=self.create_new_preset
         )
-        self.new_preset_btn.grid(row=1, column=0, padx=20, pady=10)
+        self.new_preset_btn.grid(row=1, column=0, padx=20, pady=(10, 5))
+
+        self.delete_preset_btn = ctk.CTkButton(
+            self.sidebar_frame,
+            text=t("screen_filter.sidebar.delete_preset_mode"),
+            fg_color="transparent",
+            border_width=1,
+            command=self.toggle_delete_mode
+        )
+        self.delete_preset_btn.grid(row=2, column=0, padx=20, pady=(5, 10))
 
         self.preset_list_frame = ctk.CTkScrollableFrame(
             self.sidebar_frame,
             label_text=t("screen_filter.sidebar.new_preset").replace("+ ", "")
         )
-        self.preset_list_frame.grid(row=2, column=0, padx=20, pady=10, sticky="nsew")
+        self.preset_list_frame.grid(row=3, column=0, padx=20, pady=10, sticky="nsew")
 
         self.reset_defaults_btn = ctk.CTkButton(
             self.sidebar_frame,
@@ -92,7 +102,7 @@ class ScreenFilterUI(ctk.CTkFrame):
             border_width=1,
             command=self.reset_to_defaults
         )
-        self.reset_defaults_btn.grid(row=3, column=0, padx=20, pady=10)
+        self.reset_defaults_btn.grid(row=4, column=0, padx=20, pady=10)
 
     def _create_main_area(self):
         self.main_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -310,7 +320,7 @@ class ScreenFilterUI(ctk.CTkFrame):
             btn = ctk.CTkButton(
                 preset_container,
                 text=p.name,
-                command=lambda p=p: self.select_preset(p),
+                command=lambda p=p: self.on_preset_click(p),
                 fg_color="transparent" if self.current_preset != p else "gray",
                 border_width=1,
                 anchor="w"
@@ -326,17 +336,6 @@ class ScreenFilterUI(ctk.CTkFrame):
                 command=lambda p=p: self.set_preset_hotkey(p)
             )
             hotkey_btn.pack(side="left", padx=2)
-
-            # Delete button for non-default presets
-            if not p.is_default:
-                del_btn = ctk.CTkButton(
-                    preset_container,
-                    text="×",
-                    width=30,
-                    fg_color="red",
-                    command=lambda pid=p.id: self.delete_preset(pid)
-                )
-                del_btn.pack(side="left")
 
     def select_preset(self, preset: FilterPreset):
         self.current_preset = preset
@@ -484,10 +483,33 @@ class ScreenFilterUI(ctk.CTkFrame):
             self.load_presets_ui()
             self.select_preset(new_preset)
 
+    def toggle_delete_mode(self):
+        """Toggle delete mode on/off"""
+        self.delete_mode = not self.delete_mode
+        if self.delete_mode:
+            self.delete_preset_btn.configure(fg_color="red", text=t("screen_filter.sidebar.exit_delete_mode"))
+        else:
+            self.delete_preset_btn.configure(fg_color="transparent", text=t("screen_filter.sidebar.delete_preset_mode"))
+
+    def on_preset_click(self, preset: FilterPreset):
+        """Handle preset click - either select or delete depending on mode"""
+        if self.delete_mode:
+            # In delete mode - try to delete (only non-default presets)
+            if not preset.is_default:
+                self.delete_preset(preset.id)
+            else:
+                messagebox.showwarning(t("common.warning"), t("screen_filter.sidebar.cannot_delete_default"))
+        else:
+            # Normal mode - select preset
+            self.select_preset(preset)
+
     def delete_preset(self, preset_id):
         if messagebox.askyesno(t("common.confirm"), t("screen_filter.sidebar.delete_confirm")):
             self.config_manager.delete_preset(preset_id)
             self.config_manager.save_config()
+            # Exit delete mode after deletion
+            if self.delete_mode:
+                self.toggle_delete_mode()
             self.load_presets_ui()
             # Select default if current deleted
             if self.current_preset and self.current_preset.id == preset_id:
@@ -541,7 +563,13 @@ class ScreenFilterUI(ctk.CTkFrame):
                             # No conflict, update preset hotkey
                             self.waiting_for_hotkey.hotkey = key_name
                             preset_name = self.waiting_for_hotkey.name
+
+                            # Update preset in config manager
+                            self.config_manager.update_preset(self.waiting_for_hotkey)
                             self.waiting_for_hotkey = None
+
+                            # Save config to persist hotkey change
+                            self.config_manager.save_config()
 
                             # Refresh UI to show new hotkey - must be done in main thread
                             self.after(0, self.load_presets_ui)

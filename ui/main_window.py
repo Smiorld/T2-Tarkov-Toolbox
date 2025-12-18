@@ -7,6 +7,7 @@ from modules.global_settings.ui import GlobalSettingsUI
 from utils.global_config import get_global_config
 from utils.i18n import t
 
+VERSION = "1.0.1"
 
 class MainWindow(ctk.CTk):
     """Main application window with tab-based navigation"""
@@ -80,7 +81,7 @@ class MainWindow(ctk.CTk):
 
         credit_text = ctk.CTkLabel(
             toolbar_frame,
-            text="v1.0.0 · Created by T2薯条（Smiorld） | ",
+            text=f"v{VERSION} · Created by T2薯条（Smiorld） | ",
             font=("Arial", 15),
             text_color="gray60"
         )
