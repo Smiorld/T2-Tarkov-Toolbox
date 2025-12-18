@@ -8,8 +8,7 @@ from modules.global_settings.ui import GlobalSettingsUI
 from utils.global_config import get_global_config
 from utils.i18n import t
 from utils.version_checker import get_version_checker
-
-VERSION = "1.0.2"
+from version import __version__ as VERSION
 
 class MainWindow(ctk.CTk):
     """Main application window with tab-based navigation"""

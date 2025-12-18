@@ -9,6 +9,7 @@ import time
 from typing import Optional, Callable, Tuple
 from packaging import version
 from utils.global_config import get_global_config
+from version import __version__
 
 
 class VersionChecker:
@@ -26,7 +27,7 @@ class VersionChecker:
         if self._initialized:
             return
 
-        self.current_version = "1.0.1"  # Should match VERSION in main_window.py
+        self.current_version = __version__  # Unified version from version.py
         self.github_api_url = "https://api.github.com/repos/Smiorld/T2-Tarkov-Toolbox/releases/latest"
         self.github_releases_url = "https://github.com/Smiorld/T2-Tarkov-Toolbox/releases"
 
