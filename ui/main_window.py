@@ -8,6 +8,7 @@ from modules.global_settings.ui import GlobalSettingsUI
 from utils.global_config import get_global_config
 from utils.i18n import t
 from utils.version_checker import get_version_checker
+from utils.hotkey_manager import get_hotkey_manager
 from version import __version__ as VERSION
 
 class MainWindow(ctk.CTk):
@@ -21,6 +22,10 @@ class MainWindow(ctk.CTk):
 
         # Get global config
         self.global_config = get_global_config()
+
+        # Initialize hotkey manager FIRST (before any modules that use hotkeys)
+        self.hotkey_manager = get_hotkey_manager()
+        self.hotkey_manager.start()
 
         # Initialize version checker
         self.version_checker = get_version_checker()
@@ -69,6 +74,9 @@ class MainWindow(ctk.CTk):
 
         # 设置默认tab
         self.tabview.set(t("screen_filter.title"))
+
+        # Connect tab change callback for context switching
+        self.tabview.configure(command=self._on_tab_change)
 
         # Start auto version check in background
         self._start_auto_version_check()
@@ -247,13 +255,21 @@ class MainWindow(ctk.CTk):
         # 保存新语言设置
         self.global_config.set_language(new_lang, save=True)
 
-        # 提示用户需要手动重启
+        # 临时切换到新语言以显示弹窗
+        from utils.i18n import get_i18n
+        i18n = get_i18n()
+        i18n.set_language(new_lang)
+
+        # 提示用户需要手动重启（使用目标语言）
         messagebox.showinfo(
             t("main_window.restart_title"),
             t("main_window.restart_prompt")
         )
 
-        # 恢复原选择显示（因为当前会话不会改变）
+        # 切回当前语言（因为当前会话不会改变）
+        i18n.set_language(current_lang)
+
+        # 恢复原选择显示
         if current_lang == "zh_CN":
             self.language_selector.set("中文")
         else:
@@ -387,8 +403,27 @@ class MainWindow(ctk.CTk):
         print("[MainWindow] Manual version check requested")
         self._check_version_async(is_auto_check=False)
 
+    def _on_tab_change(self, tab_name: str):
+        """Handle tab switching for context-aware hotkeys"""
+        # Map tab display names to context names
+        context_map = {
+            t("screen_filter.title"): "screen_filter",
+            t("local_map.title"): "local_map",
+            t("global_settings.title"): "global_settings"
+        }
+
+        context = context_map.get(tab_name, "global")
+        self.hotkey_manager.set_active_context(context)
+        print(f"[MainWindow] Tab changed to: {tab_name} (context: {context})")
+
     def on_closing(self):
         """Clean up resources before closing"""
+        print("[MainWindow] Closing application...")
+
+        # Stop hotkey manager first
+        if hasattr(self, 'hotkey_manager'):
+            self.hotkey_manager.stop()
+
         # Clean up each tab
         self.screen_filter_tab.cleanup()
         self.local_map_tab.cleanup()

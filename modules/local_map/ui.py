@@ -23,6 +23,7 @@ from .overlay_window import OverlayMapWindow
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from utils.i18n import t
+from utils.hotkey_manager import get_hotkey_manager
 
 
 class LocalMapUI(ctk.CTkFrame):
@@ -64,10 +65,9 @@ class LocalMapUI(ctk.CTkFrame):
         self.waiting_for_zoom_in_hotkey = False
         self.waiting_for_zoom_out_hotkey = False
 
-        # 快捷键线程控制
+        # Unified hotkey manager
+        self.hotkey_manager = get_hotkey_manager()
         self.running = True
-        self.hotkey_thread = threading.Thread(target=self._hotkey_loop, daemon=True)
-        self.hotkey_thread.start()
 
         # 从全局配置读取路径
         from utils.global_config import get_global_config
@@ -82,6 +82,9 @@ class LocalMapUI(ctk.CTkFrame):
         self._setup_ui()
         self._load_maps()
         self._migrate_config_if_needed()  # 执行配置迁移（仅首次运行）
+
+        # Register hotkeys with unified manager
+        self._register_hotkeys()
 
         # 启动截图监控 (如果路径已配置)
         if self.screenshots_path:
@@ -1997,93 +2000,168 @@ class LocalMapUI(ctk.CTkFrame):
 
     def _set_overlay_hotkey(self):
         """设置悬浮窗快捷键"""
-        self.waiting_for_hotkey = True
         self.hotkey_btn.configure(text=t("local_map.core_functions.hotkey_press_any"))
+
+        def on_key_captured(key_name):
+            """Callback when key is captured"""
+            self.after(0, lambda: self._finish_overlay_hotkey_assignment(key_name))
+
+        self.hotkey_manager.enter_assignment_mode(
+            requester_id="local_map.overlay_toggle",
+            callback=on_key_captured,
+            timeout=10.0
+        )
+
+    def _finish_overlay_hotkey_assignment(self, key_name: str):
+        """Finish overlay hotkey assignment"""
+        # Unregister old hotkey
+        if self.overlay_hotkey:
+            self.hotkey_manager.unregister_hotkey("local_map.overlay_toggle")
+
+        # Update config
+        self.overlay_hotkey = key_name
+        self.func_config.update_overlay_hotkey(key_name)
+
+        # Register new hotkey
+        self.hotkey_manager.register_hotkey(
+            hotkey_id="local_map.overlay_toggle",
+            key=key_name,
+            callback=self._on_overlay_hotkey,
+            context="global",
+            debounce=0.2
+        )
+
+        # Update UI
+        self.hotkey_btn.configure(text=t("local_map.core_functions.overlay_hotkey", overlay_hotkey=key_name))
+        messagebox.showinfo(t("common.success"), t("local_map.messages.overlay_hotkey_set_success", key_name=key_name))
 
     def _set_zoom_in_hotkey(self):
         """设置放大快捷键"""
-        self.waiting_for_zoom_in_hotkey = True
         self.zoom_in_hotkey_btn.configure(text=t("local_map.core_functions.hotkey_press_any"))
-        messagebox.showinfo(t("common.info"), t("local_map.messages.set_zoom_in_hotkey_prompt"))
+
+        def on_key_captured(key_name):
+            """Callback when key is captured"""
+            self.after(0, lambda: self._finish_zoom_in_hotkey_assignment(key_name))
+
+        self.hotkey_manager.enter_assignment_mode(
+            requester_id="local_map.zoom_in",
+            callback=on_key_captured,
+            timeout=10.0
+        )
+
+    def _finish_zoom_in_hotkey_assignment(self, key_name: str):
+        """Finish zoom in hotkey assignment"""
+        # Unregister old hotkey
+        if self.zoom_in_hotkey:
+            self.hotkey_manager.unregister_hotkey("local_map.zoom_in")
+
+        # Update config
+        self.zoom_in_hotkey = key_name
+        self.func_config.update_zoom_hotkeys(key_name, self.zoom_out_hotkey)
+
+        # Register new hotkey
+        self.hotkey_manager.register_hotkey(
+            hotkey_id="local_map.zoom_in",
+            key=key_name,
+            callback=self._on_zoom_in_hotkey,
+            context="global",
+            debounce=0.15
+        )
+
+        # Update UI
+        self.zoom_in_hotkey_btn.configure(text=t("local_map.core_functions.zoom_in_hotkey", zoom_in_hotkey=key_name))
+        messagebox.showinfo(t("common.success"), t("local_map.messages.zoom_in_hotkey_set_success", key_name=key_name))
 
     def _set_zoom_out_hotkey(self):
         """设置缩小快捷键"""
-        self.waiting_for_zoom_out_hotkey = True
         self.zoom_out_hotkey_btn.configure(text=t("local_map.core_functions.hotkey_press_any"))
-        messagebox.showinfo(t("common.info"), t("local_map.messages.set_zoom_out_hotkey_prompt"))
 
-    def _hotkey_loop(self):
-        """快捷键监听循环"""
-        while self.running:
-            try:
-                # 如果正在等待设置悬浮窗快捷键
-                if self.waiting_for_hotkey:
-                    event = keyboard.read_event(suppress=False)
-                    if event.event_type == keyboard.KEY_DOWN:
-                        key_name = event.name.upper()
-                        self.overlay_hotkey = key_name
-                        self.waiting_for_hotkey = False
+        def on_key_captured(key_name):
+            """Callback when key is captured"""
+            self.after(0, lambda: self._finish_zoom_out_hotkey_assignment(key_name))
 
-                        def update_ui():
-                            self.hotkey_btn.configure(text=t("local_map.core_functions.overlay_hotkey", overlay_hotkey=key_name))
-                            messagebox.showinfo(t("common.success"), t("local_map.messages.overlay_hotkey_set_success", key_name=key_name))
-                        self.after(0, update_ui)
+        self.hotkey_manager.enter_assignment_mode(
+            requester_id="local_map.zoom_out",
+            callback=on_key_captured,
+            timeout=10.0
+        )
 
-                        self.func_config.update_overlay_hotkey(key_name)
-                        time.sleep(0.5)
+    def _finish_zoom_out_hotkey_assignment(self, key_name: str):
+        """Finish zoom out hotkey assignment"""
+        # Unregister old hotkey
+        if self.zoom_out_hotkey:
+            self.hotkey_manager.unregister_hotkey("local_map.zoom_out")
 
-                # 如果正在等待设置放大快捷键
-                elif self.waiting_for_zoom_in_hotkey:
-                    event = keyboard.read_event(suppress=False)
-                    if event.event_type == keyboard.KEY_DOWN:
-                        key_name = event.name.upper()
-                        self.zoom_in_hotkey = key_name
-                        self.waiting_for_zoom_in_hotkey = False
+        # Update config
+        self.zoom_out_hotkey = key_name
+        self.func_config.update_zoom_hotkeys(self.zoom_in_hotkey, key_name)
 
-                        def update_ui():
-                            self.zoom_in_hotkey_btn.configure(text=t("local_map.core_functions.zoom_in_hotkey", zoom_in_hotkey=key_name))
-                            messagebox.showinfo(t("common.success"), t("local_map.messages.zoom_in_hotkey_set_success", key_name=key_name))
-                        self.after(0, update_ui)
+        # Register new hotkey
+        self.hotkey_manager.register_hotkey(
+            hotkey_id="local_map.zoom_out",
+            key=key_name,
+            callback=self._on_zoom_out_hotkey,
+            context="global",
+            debounce=0.15
+        )
 
-                        self.func_config.update_zoom_hotkeys(key_name, self.zoom_out_hotkey)
-                        time.sleep(0.5)
+        # Update UI
+        self.zoom_out_hotkey_btn.configure(text=t("local_map.core_functions.zoom_out_hotkey", zoom_out_hotkey=key_name))
+        messagebox.showinfo(t("common.success"), t("local_map.messages.zoom_out_hotkey_set_success", key_name=key_name))
 
-                # 如果正在等待设置缩小快捷键
-                elif self.waiting_for_zoom_out_hotkey:
-                    event = keyboard.read_event(suppress=False)
-                    if event.event_type == keyboard.KEY_DOWN:
-                        key_name = event.name.upper()
-                        self.zoom_out_hotkey = key_name
-                        self.waiting_for_zoom_out_hotkey = False
+    def _register_hotkeys(self):
+        """Register all hotkeys with the unified hotkey manager"""
+        # Register overlay toggle hotkey
+        if self.overlay_hotkey:
+            self.hotkey_manager.register_hotkey(
+                hotkey_id="local_map.overlay_toggle",
+                key=self.overlay_hotkey,
+                callback=self._on_overlay_hotkey,
+                context="global",
+                debounce=0.2
+            )
 
-                        def update_ui():
-                            self.zoom_out_hotkey_btn.configure(text=t("local_map.core_functions.zoom_out_hotkey", zoom_out_hotkey=key_name))
-                            messagebox.showinfo(t("common.success"), t("local_map.messages.zoom_out_hotkey_set_success", key_name=key_name))
-                        self.after(0, update_ui)
+        # Register zoom in hotkey
+        if self.zoom_in_hotkey:
+            self.hotkey_manager.register_hotkey(
+                hotkey_id="local_map.zoom_in",
+                key=self.zoom_in_hotkey,
+                callback=self._on_zoom_in_hotkey,
+                context="global",
+                debounce=0.15
+            )
 
-                        self.func_config.update_zoom_hotkeys(self.zoom_in_hotkey, key_name)
-                        time.sleep(0.5)
+        # Register zoom out hotkey
+        if self.zoom_out_hotkey:
+            self.hotkey_manager.register_hotkey(
+                hotkey_id="local_map.zoom_out",
+                key=self.zoom_out_hotkey,
+                callback=self._on_zoom_out_hotkey,
+                context="global",
+                debounce=0.15
+            )
 
-                else:
-                    # 检测悬浮窗显隐快捷键
-                    if self.overlay_hotkey and keyboard.is_pressed(self.overlay_hotkey):
-                        self.after(0, self._toggle_overlay)
-                        time.sleep(0.2)
+    def _unregister_hotkeys(self):
+        """Unregister all hotkeys from the unified hotkey manager"""
+        self.hotkey_manager.unregister_hotkey("local_map.overlay_toggle")
+        self.hotkey_manager.unregister_hotkey("local_map.zoom_in")
+        self.hotkey_manager.unregister_hotkey("local_map.zoom_out")
 
-                    # 检测缩放快捷键（仅在悬浮窗显示时）
-                    if self.overlay_window and self.overlay_window.winfo_exists():
-                        if self.zoom_in_hotkey and keyboard.is_pressed(self.zoom_in_hotkey):
-                            self.after(0, lambda: self._hotkey_zoom(self.zoom_step))
-                            time.sleep(0.15)
+    def _on_overlay_hotkey(self):
+        """Callback when overlay toggle hotkey is pressed"""
+        self.after(0, self._toggle_overlay)
 
-                        if self.zoom_out_hotkey and keyboard.is_pressed(self.zoom_out_hotkey):
-                            self.after(0, lambda: self._hotkey_zoom(-self.zoom_step))
-                            time.sleep(0.15)
+    def _on_zoom_in_hotkey(self):
+        """Callback when zoom in hotkey is pressed"""
+        # Only zoom if overlay window exists and is visible
+        if self.overlay_window and self.overlay_window.winfo_exists():
+            self.after(0, lambda: self._hotkey_zoom(self.zoom_step))
 
-                    time.sleep(0.1)
-            except Exception as e:
-                print(f"快捷键检测错误: {e}")
-                time.sleep(0.1)
+    def _on_zoom_out_hotkey(self):
+        """Callback when zoom out hotkey is pressed"""
+        # Only zoom if overlay window exists and is visible
+        if self.overlay_window and self.overlay_window.winfo_exists():
+            self.after(0, lambda: self._hotkey_zoom(-self.zoom_step))
 
     def _hotkey_zoom(self, delta: float):
         """
@@ -2333,6 +2411,9 @@ class LocalMapUI(ctk.CTkFrame):
         """清理资源"""
         # 停止快捷键线程
         self.running = False
+
+        # Unregister all hotkeys
+        self._unregister_hotkeys()
 
         self._stop_screenshot_monitoring()
         self._stop_log_monitoring()

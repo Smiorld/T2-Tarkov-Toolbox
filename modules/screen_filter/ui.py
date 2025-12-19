@@ -10,6 +10,7 @@ from modules.screen_filter.gamma_controller import GammaController
 from modules.screen_filter.state_manager import ConfigManager
 from modules.screen_filter.value_mapper import ValueMapper
 from utils.i18n import t
+from utils.hotkey_manager import get_hotkey_manager
 
 
 class ScreenFilterUI(ctk.CTkFrame):
@@ -21,6 +22,7 @@ class ScreenFilterUI(ctk.CTkFrame):
         # Managers
         self.gamma_controller = GammaController()
         self.config_manager = ConfigManager()  # Unified config manager
+        self.hotkey_manager = get_hotkey_manager()
 
         # State
         self.current_preset: FilterPreset = None
@@ -31,6 +33,7 @@ class ScreenFilterUI(ctk.CTkFrame):
         self.waiting_for_hotkey = None  # Preset waiting for hotkey assignment
         self.get_overlay_window = None  # Callback to get overlay window reference
         self.delete_mode = False  # Delete mode flag
+        self.preset_hotkey_buttons = {}  # preset.id -> CTkButton reference for visual feedback
 
         # Layout
         self.grid_columnconfigure(1, weight=1)
@@ -48,9 +51,8 @@ class ScreenFilterUI(ctk.CTkFrame):
         if presets:
             self.select_preset(presets[0])
 
-        # Start Hotkey Listener
-        self.hotkey_thread = threading.Thread(target=self._hotkey_loop, daemon=True)
-        self.hotkey_thread.start()
+        # Register preset hotkeys with unified manager
+        self._register_preset_hotkeys()
 
     def set_overlay_window_callback(self, callback):
         """
@@ -306,9 +308,10 @@ class ScreenFilterUI(ctk.CTkFrame):
         self.selected_monitors = [dev for dev, var in self.monitor_vars.items() if var.get()]
 
     def load_presets_ui(self):
-        # Clear list
+        # Clear list and button references
         for widget in self.preset_list_frame.winfo_children():
             widget.destroy()
+        self.preset_hotkey_buttons.clear()
 
         presets = self.config_manager.get_all_presets()
         for p in presets:
@@ -336,6 +339,9 @@ class ScreenFilterUI(ctk.CTkFrame):
                 command=lambda p=p: self.set_preset_hotkey(p)
             )
             hotkey_btn.pack(side="left", padx=2)
+
+            # Store button reference for visual feedback during assignment
+            self.preset_hotkey_buttons[p.id] = hotkey_btn
 
     def select_preset(self, preset: FilterPreset):
         self.current_preset = preset
@@ -455,12 +461,68 @@ class ScreenFilterUI(ctk.CTkFrame):
 
     def set_preset_hotkey(self, preset: FilterPreset):
         """Allow user to set a custom hotkey for a preset"""
-        self.waiting_for_hotkey = preset
-        messagebox.showinfo(
-            t("screen_filter.hotkeys.set_title"),
-            t("screen_filter.hotkeys.set_prompt", preset_name=preset.name)
+        def on_key_captured(key_name):
+            """Callback when key is captured by HotkeyManager"""
+            self.after(0, lambda: self._finish_hotkey_assignment(preset, key_name))
+
+        def check_conflict(key_name):
+            """Check if key conflicts with another preset's hotkey"""
+            presets = self.config_manager.get_all_presets()
+            for p in presets:
+                if p.id != preset.id and p.hotkey and p.hotkey.upper() == key_name.upper():
+                    # Show warning in main thread
+                    conflict_name = p.name
+                    def show_warning():
+                        messagebox.showwarning(
+                            t("screen_filter.hotkeys.set_title"),
+                            t("screen_filter.messages.hotkey_conflict_detail", key_name=key_name, conflict_name=conflict_name)
+                        )
+                    self.after(0, show_warning)
+                    return True
+            return False
+
+        # Update button text to show visual feedback
+        if preset.id in self.preset_hotkey_buttons:
+            self.preset_hotkey_buttons[preset.id].configure(text=t("screen_filter.hotkeys.press_any"))
+
+        # Enter assignment mode immediately (non-blocking)
+        self.hotkey_manager.enter_assignment_mode(
+            requester_id=f"screen_filter.preset.{preset.id}",
+            callback=on_key_captured,
+            conflict_check=check_conflict,
+            timeout=10.0
         )
-        # The hotkey will be captured in the hotkey loop
+
+    def _finish_hotkey_assignment(self, preset: FilterPreset, key_name: str):
+        """Finish hotkey assignment after key is captured"""
+        # Unregister old hotkey if it exists
+        if preset.hotkey:
+            old_hotkey_id = f"screen_filter.preset.{preset.id}"
+            self.hotkey_manager.unregister_hotkey(old_hotkey_id)
+
+        # Update preset with new hotkey
+        preset.hotkey = key_name
+        self.config_manager.update_preset(preset)
+        self.config_manager.save_config()
+
+        # Register new hotkey
+        new_hotkey_id = f"screen_filter.preset.{preset.id}"
+        self.hotkey_manager.register_hotkey(
+            hotkey_id=new_hotkey_id,
+            key=key_name,
+            callback=lambda: self._on_preset_hotkey(preset),
+            context="global",
+            debounce=0.2
+        )
+
+        # Refresh UI
+        self.load_presets_ui()
+
+        # Show success message
+        messagebox.showinfo(
+            t("common.success"),
+            t("screen_filter.messages.hotkey_set_success", key_name=key_name)
+        )
 
     def create_new_preset(self):
         dialog = ctk.CTkInputDialog(text=t("screen_filter.sidebar.preset_name_prompt"), title=t("screen_filter.sidebar.new_preset"))
@@ -530,78 +592,49 @@ class ScreenFilterUI(ctk.CTkFrame):
             self.load_presets_ui()
             self.select_preset(self.config_manager.get_all_presets()[0])
 
-    def _hotkey_loop(self):
-        while self.running:
-            try:
-                # If waiting for hotkey binding, capture any key press
-                if self.waiting_for_hotkey:
-                    event = keyboard.read_event(suppress=False)
-                    if event.event_type == keyboard.KEY_DOWN:
-                        # Get the key name and normalize to uppercase
-                        key_name = event.name.upper()
+    def _register_preset_hotkeys(self):
+        """Register all preset hotkeys with the unified hotkey manager"""
+        presets = self.config_manager.get_all_presets()
+        for preset in presets:
+            if preset.hotkey:
+                hotkey_id = f"screen_filter.preset.{preset.id}"
+                self.hotkey_manager.register_hotkey(
+                    hotkey_id=hotkey_id,
+                    key=preset.hotkey,
+                    callback=lambda p=preset: self._on_preset_hotkey(p),
+                    context="global",
+                    debounce=0.2
+                )
 
-                        # Check if this hotkey is already in use by another preset
-                        presets = self.config_manager.get_all_presets()
-                        conflict = None
-                        for p in presets:
-                            if p.id != self.waiting_for_hotkey.id and p.hotkey and p.hotkey.upper() == key_name:
-                                conflict = p
-                                break
+    def _unregister_preset_hotkeys(self):
+        """Unregister all preset hotkeys from the unified hotkey manager"""
+        presets = self.config_manager.get_all_presets()
+        for preset in presets:
+            if preset.hotkey:
+                hotkey_id = f"screen_filter.preset.{preset.id}"
+                self.hotkey_manager.unregister_hotkey(hotkey_id)
 
-                        if conflict:
-                            # Hotkey conflict detected - show in main thread
-                            conflict_name = conflict.name
-                            def show_warning():
-                                messagebox.showwarning(
-                                    t("screen_filter.hotkeys.set_title"),
-                                    t("screen_filter.messages.hotkey_conflict_detail", key_name=key_name, conflict_name=conflict_name)
-                                )
-                            self.after(0, show_warning)
-                            # Don't clear waiting state, allow user to try again
-                            time.sleep(0.5)
-                        else:
-                            # No conflict, update preset hotkey
-                            self.waiting_for_hotkey.hotkey = key_name
-                            preset_name = self.waiting_for_hotkey.name
+    def _on_preset_hotkey(self, preset: FilterPreset):
+        """Callback when preset hotkey is pressed"""
+        # Schedule in main thread
+        self.after(0, lambda: self._apply_preset(preset))
 
-                            # Update preset in config manager
-                            self.config_manager.update_preset(self.waiting_for_hotkey)
-                            self.waiting_for_hotkey = None
-
-                            # Save config to persist hotkey change
-                            self.config_manager.save_config()
-
-                            # Refresh UI to show new hotkey - must be done in main thread
-                            self.after(0, self.load_presets_ui)
-
-                            # Show success message in main thread
-                            def show_success():
-                                messagebox.showinfo(t("common.success"), t("screen_filter.messages.hotkey_set_success", key_name=key_name))
-                            self.after(100, show_success)
-
-                            time.sleep(0.5)  # Prevent double trigger
-                else:
-                    # Normal hotkey detection for preset switching
-                    presets = self.config_manager.get_all_presets()
-                    for p in presets:
-                        if p.hotkey and keyboard.is_pressed(p.hotkey):
-                            # Apply screen filter
-                            self.gamma_controller.apply_config(
-                                p.config,
-                                self.selected_monitors
-                            )
-
-                            # Apply overlay compensation
-                            self._apply_overlay_compensation(p.config)
-
-                            time.sleep(0.2)  # Debounce
-                    time.sleep(0.1)
-            except Exception as e:
-                print(f"Hotkey error: {e}")
+    def _apply_preset(self, preset: FilterPreset):
+        """Apply a preset configuration"""
+        # Apply screen filter
+        self.gamma_controller.apply_config(
+            preset.config,
+            self.selected_monitors
+        )
+        # Apply overlay compensation
+        self._apply_overlay_compensation(preset.config)
 
     def cleanup(self):
         """Clean up resources when tab is closed"""
         self.running = False
+
+        # Unregister all hotkeys
+        self._unregister_preset_hotkeys()
 
         # Reset filters if reset_on_close is enabled
         if self.config_manager.get_reset_on_close():

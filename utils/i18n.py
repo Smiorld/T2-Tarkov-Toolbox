@@ -24,16 +24,19 @@ class I18nManager:
             return
 
         self.locales_dir = Path(__file__).parent.parent / "locales"
-        self.current_language = "zh_CN"  # 默认中文
+        self.current_language = None  # 延迟初始化，首次调用t()时从配置读取
         self.translations = {}
 
-        # 立即加载默认语言的翻译
-        self._load_translations()
+        # 不再立即加载 - 改为首次调用t()时自动加载
 
         self._initialized = True
 
     def set_language(self, language: str):
         """设置当前语言并加载翻译文件"""
+        # 避免重复加载相同语言
+        if self.current_language == language:
+            return
+
         self.current_language = language
         self._load_translations()
 
@@ -57,6 +60,7 @@ class I18nManager:
     def t(self, key: str, **kwargs) -> str:
         """
         翻译文本（支持变量替换）
+        首次调用时自动从配置加载语言
 
         Args:
             key: 翻译键（使用点分隔，如 "screen_filter.title"）
@@ -65,6 +69,13 @@ class I18nManager:
         Returns:
             翻译后的文本，如果找不到则返回 [key]
         """
+        # 首次调用时初始化语言（延迟加载）
+        if self.current_language is None:
+            from utils.global_config import get_global_config
+            config = get_global_config()
+            self.current_language = config.get_language()
+            self._load_translations()
+
         # 支持嵌套键
         keys = key.split('.')
         value = self.translations
@@ -106,6 +117,6 @@ def t(key: str, **kwargs) -> str:
     return _i18n_manager.t(key, **kwargs)
 
 
-def get_current_language() -> str:
-    """获取当前语言设置"""
+def get_current_language() -> Optional[str]:
+    """获取当前语言设置（可能为None如果尚未初始化）"""
     return _i18n_manager.current_language

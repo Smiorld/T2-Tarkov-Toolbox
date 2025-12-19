@@ -68,7 +68,8 @@
       "placeholder": "Click to record hotkey",
       "not_set": "Not Set",
       "set_title": "Set Hotkey",
-      "set_prompt": "Press the hotkey to bind to '{preset_name}'..."
+      "set_prompt": "Press the hotkey to bind to '{preset_name}'...",
+      "press_any": "Press any key..."
     },
     "monitors": {
       "title": "Monitor Settings",

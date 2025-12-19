@@ -68,7 +68,8 @@
       "placeholder": "点击录制快捷键",
       "not_set": "未设置",
       "set_title": "设置快捷键",
-      "set_prompt": "请按下要绑定给 '{preset_name}' 的快捷键..."
+      "set_prompt": "请按下要绑定给 '{preset_name}' 的快捷键...",
+      "press_any": "按任意键..."
     },
     "monitors": {
       "title": "显示器设置",
