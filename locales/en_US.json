@@ -295,7 +295,15 @@
       "export_map_config_title": "Export Map Configuration",
       "import_map_config_title": "Import Map Configuration",
       "select_screenshot_folder": "Select Screenshot Folder",
-      "select_log_folder": "Select Log Folder"
+      "select_log_folder": "Select Log Folder",
+      "base_map_exists_title": "Base Map Already Exists",
+      "base_map_exists_convert_prompt": "A base map already exists: '{current_name}'\n\nDo you want to convert it to a floor map and set '{new_name}' as the new base map?\n\nWarning: All existing region markings will be deleted (regions are tied to the base map).\n\nYes: Convert and swap base maps\nNo: Cancel this operation",
+      "base_map_swapped": "Base map has been changed. All region markings have been cleared.",
+      "cannot_convert_base_map_title": "Cannot Convert Base Map",
+      "cannot_convert_base_map_message": "Cannot directly convert the base map to a floor map.\n\nIf you want to change which layer is the base map:\n1. Import or create a new layer as base map\n2. The system will automatically convert the old base map to floor map",
+      "import_auto_fix_no_base_map": "Auto-fix applied: No base map found in import data.\nLayer 0 has been set as the base map.",
+      "import_auto_fix_no_base_map_first": "Auto-fix applied: No base map found and no layer 0.\nThe first layer has been set as the base map.",
+      "import_auto_fix_multiple_base_maps": "Auto-fix applied: Multiple base maps found in import data.\nLayer 0 (or first layer) has been kept as base map, others converted to floor maps."
     }
   },
   "global_settings": {

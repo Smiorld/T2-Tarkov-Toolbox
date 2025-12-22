@@ -756,9 +756,28 @@ class LocalMapUI(ctk.CTkFrame):
             return
 
         # 询问层级信息（包括导入类型）
-        dialog = LayerConfigDialog(self, t("local_map.messages.new_layer"))
+        dialog = LayerConfigDialog(
+            self,
+            t("local_map.messages.new_layer"),
+            self.current_map_id,
+            self.config_manager,
+            is_editing=False
+        )
         if dialog.result:
-            layer_id, layer_name, height_min, height_max, rotation_offset, is_base_map = dialog.result
+            layer_id, layer_name, height_min, height_max, rotation_offset, is_base_map, swap_required = dialog.result
+
+            # Handle base map swap if required
+            if swap_required:
+                success, error = self.config_manager.swap_base_map(
+                    self.current_map_id, layer_id
+                )
+                if not success:
+                    messagebox.showerror(t("common.error"), error)
+                    return
+                messagebox.showinfo(
+                    t("common.success"),
+                    t("local_map.messages.base_map_swapped")
+                )
 
             try:
                 # 使用路径管理器规范化图片路径（复制到正确位置并转换为相对路径）
@@ -810,16 +829,19 @@ class LocalMapUI(ctk.CTkFrame):
         dialog = LayerConfigDialog(
             self,
             t("local_map.map_management.config_layer_height"),
+            self.current_map_id,
+            self.config_manager,
             layer.layer_id,
             layer.name,
             layer.height_min,
             layer.height_max,
             layer.rotation_offset,
-            layer.is_base_map
+            layer.is_base_map,
+            is_editing=True
         )
 
         if dialog.result:
-            layer_id, layer_name, height_min, height_max, rotation_offset, is_base_map = dialog.result
+            layer_id, layer_name, height_min, height_max, rotation_offset, is_base_map, swap_required = dialog.result
             layer.name = layer_name
             layer.height_min = height_min
             layer.height_max = height_max
@@ -2225,7 +2247,7 @@ class LocalMapUI(ctk.CTkFrame):
             with zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 # 导出配置JSON
                 config_data = {
-                    "version": "1.0",
+                    "version": "2.0",
                     "export_date": datetime.now().isoformat(),
                     "map_id": map_config.map_id,
                     "display_name": map_config.display_name,
@@ -2249,6 +2271,8 @@ class LocalMapUI(ctk.CTkFrame):
                         "height_min": layer.height_min,
                         "height_max": layer.height_max,
                         "rotation_offset": layer.rotation_offset,
+                        "is_base_map": layer.is_base_map,
+                        "region_owner_layer_id": layer.region_owner_layer_id,
                         "calibration_points": [
                             {
                                 "game_pos": {"x": pt.game_pos.x, "y": pt.game_pos.y, "z": pt.game_pos.z},
@@ -2259,6 +2283,13 @@ class LocalMapUI(ctk.CTkFrame):
                             for pt in layer.calibration_points
                         ]
                     }
+
+                    # 导出区域（如果该层级拥有区域）
+                    if layer.is_region_owner() and layer.region:
+                        layer_data["region"] = {
+                            "points": layer.region.points
+                        }
+
                     config_data["layers"].append(layer_data)
 
                     # 添加图片文件到ZIP（使用绝对路径）
@@ -2360,6 +2391,16 @@ class LocalMapUI(ctk.CTkFrame):
                         for pt in layer_data["calibration_points"]
                     ]
 
+                    # 读取新字段（向后兼容）
+                    is_base_map = layer_data.get("is_base_map", layer_data["layer_id"] == 0)
+                    region_owner_layer_id = layer_data.get("region_owner_layer_id")
+
+                    # 读取区域
+                    region = None
+                    if "region" in layer_data and region_owner_layer_id is None:
+                        from .models import Region
+                        region = Region(points=layer_data["region"].get("points", []))
+
                     # 创建层级（使用相对路径）
                     layer = MapLayer(
                         layer_id=layer_data["layer_id"],
@@ -2368,9 +2409,46 @@ class LocalMapUI(ctk.CTkFrame):
                         height_min=layer_data["height_min"],
                         height_max=layer_data["height_max"],
                         rotation_offset=layer_data.get("rotation_offset", 0.0),
-                        calibration_points=calibration_points
+                        calibration_points=calibration_points,
+                        is_base_map=is_base_map,
+                        region=region,
+                        region_owner_layer_id=region_owner_layer_id
                     )
                     layers.append(layer)
+
+                # === 自动修复大地图约束 ===
+                base_map_count = sum(1 for layer in layers if layer.is_base_map)
+
+                if base_map_count == 0:
+                    # 无大地图：设置layer_id 0（或第一个）为大地图
+                    layer_0 = next((l for l in layers if l.layer_id == 0), None)
+                    if layer_0:
+                        layer_0.is_base_map = True
+                        messagebox.showinfo(
+                            t("common.info"),
+                            t("local_map.messages.import_auto_fix_no_base_map")
+                        )
+                    elif layers:
+                        layers[0].is_base_map = True
+                        messagebox.showinfo(
+                            t("common.info"),
+                            t("local_map.messages.import_auto_fix_no_base_map_first")
+                        )
+
+                elif base_map_count > 1:
+                    # 多个大地图：保留layer_id 0（或第一个），转换其他
+                    layer_0 = next((l for l in layers if l.layer_id == 0), None)
+                    for layer in layers:
+                        if layer.is_base_map:
+                            if layer_0 and layer.layer_id != 0:
+                                layer.is_base_map = False
+                            elif not layer_0 and layer != layers[0]:
+                                layer.is_base_map = False
+
+                    messagebox.showinfo(
+                        t("common.info"),
+                        t("local_map.messages.import_auto_fix_multiple_base_maps")
+                    )
 
                 # 创建地图配置
                 map_config = MapConfig(
@@ -2460,12 +2538,17 @@ class LocalMapUI(ctk.CTkFrame):
 class LayerConfigDialog(ctk.CTkToplevel):
     """层级配置对话框"""
 
-    def __init__(self, parent, title: str, layer_id: int = 0, layer_name: str = "",
+    def __init__(self, parent, title: str, map_id: str, config_manager,
+                 layer_id: int = 0, layer_name: str = "",
                  height_min: float = 0.0, height_max: float = 10.0, rotation_offset: float = 0.0,
-                 is_base_map: bool = False):
+                 is_base_map: bool = False, is_editing: bool = False):
         super().__init__(parent)
 
         self.result = None
+        self.map_id = map_id
+        self.config_manager = config_manager
+        self.is_editing = is_editing
+        self.original_is_base_map = is_base_map
 
         self.title(title)
         self.geometry("420x480")
@@ -2491,24 +2574,40 @@ class LayerConfigDialog(ctk.CTkToplevel):
         )
         type_hint.pack(pady=(0, 5))
 
-        self.map_type_var = ctk.StringVar(value="base_map" if is_base_map else "floor_map")
+        # 检查是否为第一个层级（必须是大地图）
+        map_config = self.config_manager.get_map_config(self.map_id)
+        is_first_layer = (not map_config or len(map_config.layers) == 0) and not is_editing
+
+        # 如果是第一个层级，强制设置为大地图
+        if is_first_layer:
+            self.map_type_var = ctk.StringVar(value="base_map")
+            type_hint.configure(
+                text="第一个图层必须是大地图（基础层）\n后续可以添加楼层图",
+                text_color="orange"
+            )
+        else:
+            self.map_type_var = ctk.StringVar(value="base_map" if is_base_map else "floor_map")
 
         type_frame = ctk.CTkFrame(scroll_frame, fg_color="transparent")
         type_frame.pack(pady=(0, 10))
 
-        ctk.CTkRadioButton(
+        self.base_map_radio = ctk.CTkRadioButton(
             type_frame,
             text="大地图 (Base Map)",
             variable=self.map_type_var,
-            value="base_map"
-        ).pack(side="left", padx=10)
+            value="base_map",
+            state="disabled" if is_first_layer else "normal"
+        )
+        self.base_map_radio.pack(side="left", padx=10)
 
-        ctk.CTkRadioButton(
+        self.floor_map_radio = ctk.CTkRadioButton(
             type_frame,
             text="楼层图 (Floor Map)",
             variable=self.map_type_var,
-            value="floor_map"
-        ).pack(side="left", padx=10)
+            value="floor_map",
+            state="disabled" if is_first_layer else "normal"
+        )
+        self.floor_map_radio.pack(side="left", padx=10)
 
         # 分隔线
         ctk.CTkFrame(scroll_frame, height=1, fg_color="gray40").pack(fill="x", padx=15, pady=10)
@@ -2574,7 +2673,7 @@ class LayerConfigDialog(ctk.CTkToplevel):
         self.wait_window()
 
     def _on_ok(self):
-        """确定按钮"""
+        """确定按钮 with base map constraint validation"""
         try:
             layer_id = int(self.layer_id_entry.get())
             layer_name = self.layer_name_entry.get()
@@ -2591,7 +2690,39 @@ class LayerConfigDialog(ctk.CTkToplevel):
                 messagebox.showwarning(t("common.info"), t("local_map.messages.height_min_max_error"))
                 return
 
-            self.result = (layer_id, layer_name, height_min, height_max, rotation_offset, is_base_map)
+            # === Base map constraint validation ===
+            map_config = self.config_manager.get_map_config(self.map_id)
+            current_base_map = map_config.get_base_map() if map_config else None
+
+            # Case 1: Creating second base map
+            if is_base_map and not self.is_editing and current_base_map:
+                response = messagebox.askyesnocancel(
+                    t("local_map.messages.base_map_exists_title"),
+                    t("local_map.messages.base_map_exists_convert_prompt",
+                      current_name=current_base_map.name,
+                      new_name=layer_name)
+                )
+                if response is None:  # Cancel
+                    return
+                elif response:  # Yes - swap
+                    # Return with swap_required=True flag
+                    self.result = (layer_id, layer_name, height_min, height_max,
+                                  rotation_offset, is_base_map, True)
+                    self.destroy()
+                    return
+                else:  # No
+                    return
+
+            # Case 2: Editing base map to floor map (prevent)
+            if self.is_editing and self.original_is_base_map and not is_base_map:
+                messagebox.showwarning(
+                    t("local_map.messages.cannot_convert_base_map_title"),
+                    t("local_map.messages.cannot_convert_base_map_message")
+                )
+                return
+
+            self.result = (layer_id, layer_name, height_min, height_max,
+                          rotation_offset, is_base_map, False)
             self.destroy()
 
         except ValueError:

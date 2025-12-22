@@ -295,7 +295,15 @@
       "export_map_config_title": "导出地图配置",
       "import_map_config_title": "导入地图配置",
       "select_screenshot_folder": "选择截图文件夹",
-      "select_log_folder": "选择日志文件夹"
+      "select_log_folder": "选择日志文件夹",
+      "base_map_exists_title": "大地图已存在",
+      "base_map_exists_convert_prompt": "已存在大地图：'{current_name}'\n\n是否要将其转换为楼层图，并将 '{new_name}' 设置为新的大地图？\n\n警告：所有现有的区域标记将被删除（区域与大地图绑定）。\n\n是：转换并交换大地图\n否：取消此操作",
+      "base_map_swapped": "大地图已更换，所有区域标记已清空。",
+      "cannot_convert_base_map_title": "无法转换大地图",
+      "cannot_convert_base_map_message": "不能直接将大地图转换为楼层图。\n\n如果要更改哪个图层是大地图：\n1. 导入或创建新图层作为大地图\n2. 系统会自动将旧的大地图转换为楼层图",
+      "import_auto_fix_no_base_map": "自动修复：导入数据中未找到大地图。\n已将图层0设置为大地图。",
+      "import_auto_fix_no_base_map_first": "自动修复：导入数据中未找到大地图且无图层0。\n已将第一个图层设置为大地图。",
+      "import_auto_fix_multiple_base_maps": "自动修复：导入数据中发现多个大地图。\n已保留图层0（或第一个图层）为大地图，其他转换为楼层图。"
     }
   },
   "global_settings": {

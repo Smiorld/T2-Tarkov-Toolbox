@@ -630,3 +630,71 @@ class MapConfigManager:
             return True, None
         else:
             return False, "删除失败（未知错误）"
+
+    def get_base_map(self, map_id: str) -> Optional[MapLayer]:
+        """获取指定地图的大地图层级"""
+        map_config = self.get_map_config(map_id)
+        if not map_config:
+            return None
+        return map_config.get_base_map()
+
+    def count_base_maps(self, map_id: str) -> int:
+        """统计指定地图的大地图数量（应始终为1）"""
+        map_config = self.get_map_config(map_id)
+        if not map_config:
+            return 0
+        return sum(1 for layer in map_config.layers if layer.is_base_map)
+
+    def validate_base_map_constraint(self, map_id: str) -> tuple[bool, Optional[str]]:
+        """验证大地图约束：每个地图必须有且仅有一个大地图"""
+        count = self.count_base_maps(map_id)
+        if count == 0:
+            return False, "未找到大地图。每个地图必须有且仅有一个大地图。"
+        elif count > 1:
+            return False, f"找到 {count} 个大地图。每个地图必须有且仅有一个大地图。"
+        return True, None
+
+    def swap_base_map(self, map_id: str, new_base_layer_id: int) -> tuple[bool, Optional[str]]:
+        """
+        交换大地图：旧大地图→楼层图，新楼层图→大地图
+        删除所有区域标记（大地图更改后区域坐标失效）
+        """
+        map_config = self.get_map_config(map_id)
+        if not map_config:
+            return False, f"地图 ID '{map_id}' 未找到"
+
+        new_base_layer = map_config.get_layer_by_id(new_base_layer_id)
+        if not new_base_layer:
+            return False, f"层级 ID '{new_base_layer_id}' 未找到"
+
+        if new_base_layer.is_base_map:
+            return False, "该层级已经是大地图"
+
+        old_base_map = map_config.get_base_map()
+        if not old_base_map:
+            return False, "未找到现有的大地图"
+
+        # 交换大地图标记
+        old_base_map.is_base_map = False
+        new_base_layer.is_base_map = True
+
+        # 清除所有楼层图的区域标记（大地图更改后区域坐标失效）
+        for layer in map_config.layers:
+            if not layer.is_base_map:
+                layer.region = None
+                layer.region_owner_layer_id = None
+
+        self.save_config()
+        return True, None
+
+    def delete_all_regions(self, map_id: str):
+        """删除所有楼层图的区域标记（当大地图更改时使用）"""
+        map_config = self.get_map_config(map_id)
+        if not map_config:
+            return
+
+        for layer in map_config.get_floor_maps():
+            layer.region = None
+            layer.region_owner_layer_id = None
+
+        self.save_config()

@@ -403,8 +403,11 @@ class MainWindow(ctk.CTk):
         print("[MainWindow] Manual version check requested")
         self._check_version_async(is_auto_check=False)
 
-    def _on_tab_change(self, tab_name: str):
+    def _on_tab_change(self):
         """Handle tab switching for context-aware hotkeys"""
+        # Get current tab name from tabview
+        tab_name = self.tabview.get()
+
         # Map tab display names to context names
         context_map = {
             t("screen_filter.title"): "screen_filter",
