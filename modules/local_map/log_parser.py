@@ -42,7 +42,7 @@ class LogParser:
     def __init__(self):
         self.current_raid: Optional[RaidInfo] = None
 
-    def parse_line(self, line: str) -> Optional[RaidInfo]:
+    def parse_line(self, line: str) -> tuple[Optional[str], Optional[RaidInfo]]:
         """
         解析日志行
 
@@ -50,7 +50,9 @@ class LogParser:
             line: 日志文件的一行
 
         Returns:
-            RaidInfo or None: 如果检测到战局开始，返回战局信息
+            tuple: (event_type, raid_info)
+                event_type: "map_loading" | "raid_started" | None
+                raid_info: RaidInfo 对象或 None
         """
         # 检测地图加载
         if "scene preset path:maps/" in line:
@@ -70,6 +72,8 @@ class LogParser:
                         is_online=False,
                         is_pmc=True
                     )
+                    # 触发地图加载事件
+                    return ("map_loading", self.current_raid)
 
         # 检测匹配完成（获取队列时间）
         if "MatchingCompleted" in line and self.current_raid:
@@ -111,9 +115,9 @@ class LogParser:
             print(f"[LogParser]   RaidID: {self.current_raid.raid_id}")
             print(f"[LogParser]   模式: {'在线' if self.current_raid.is_online else '离线'} / {'PMC' if self.current_raid.is_pmc else 'Scav'}")
             print(f"[LogParser] ==============================")
-            # 返回战局信息，表示新战局开始
+            # 触发战局开始事件
             raid_info = self.current_raid
-            return raid_info
+            return ("raid_started", raid_info)
 
         # 检测战局结束
         if "UserMatchOver" in line and self.current_raid:
@@ -140,7 +144,7 @@ class LogParser:
                         self.current_raid.server_ip = ip
                         break
 
-        return None
+        return (None, None)
 
     def get_current_raid(self) -> Optional[RaidInfo]:
         """获取当前正在进行的战局信息"""
@@ -154,7 +158,8 @@ class LogMonitor:
     持续监控塔科夫日志文件，实时解析新增内容
     """
 
-    def __init__(self, log_file_path: str, on_raid_start=None, on_raid_end=None, start_from_end=True):
+    def __init__(self, log_file_path: str, on_raid_start=None, on_raid_end=None,
+                 on_map_loading=None, start_from_end=True, on_log_switch=None):
         """
         初始化日志监控器
 
@@ -162,20 +167,78 @@ class LogMonitor:
             log_file_path: 日志文件路径
             on_raid_start: 战局开始回调函数 (raid_info: RaidInfo) -> None
             on_raid_end: 战局结束回调函数 (raid_info: RaidInfo) -> None
+            on_map_loading: 地图加载回调函数 (raid_info: RaidInfo) -> None
             start_from_end: 是否从文件末尾开始监控（跳过现有内容），默认True
+            on_log_switch: 日志文件切换回调函数 (new_log_path: str) -> None
         """
         self.log_file_path = log_file_path
         self.parser = LogParser()
         self.on_raid_start = on_raid_start
         self.on_raid_end = on_raid_end
+        self.on_map_loading = on_map_loading
+        self.on_log_switch = on_log_switch
         self.start_from_end = start_from_end
         self.last_position = 0
         self.is_running = False
+        self.logs_base_dir = None  # Will be set to the parent Logs directory
+        self.current_log_dir = None  # Current log subdirectory being monitored
+
+    def _get_latest_log_dir(self, logs_base_dir):
+        """
+        获取最新的日志目录（按文件夹名称中的时间戳）
+
+        Returns:
+            最新日志目录的完整路径，如果没有找到则返回None
+        """
+        import os
+        import re
+        from datetime import datetime
+
+        if not os.path.exists(logs_base_dir):
+            return None
+
+        log_folders = [
+            f for f in os.listdir(logs_base_dir)
+            if os.path.isdir(os.path.join(logs_base_dir, f)) and f.startswith("log_")
+        ]
+
+        if not log_folders:
+            return None
+
+        # Parse timestamps and find the latest
+        latest_folder = None
+        latest_date = None
+
+        for folder in log_folders:
+            # Format: log_YYYY.MM.DD_H-mm-ss
+            match = re.match(r'log_(\d{4})\.(\d{2})\.(\d{2})_(\d+)-(\d{2})-(\d{2})', folder)
+            if match:
+                try:
+                    year, month, day, hour, minute, second = map(int, match.groups())
+                    folder_date = datetime(year, month, day, hour, minute, second)
+                    if latest_date is None or folder_date > latest_date:
+                        latest_date = folder_date
+                        latest_folder = folder
+                except ValueError:
+                    continue
+
+        if latest_folder:
+            return os.path.join(logs_base_dir, latest_folder)
+        return None
 
     def start(self):
         """开始监控日志文件"""
         import threading
         import time
+        import os
+
+        # Initialize directory tracking
+        if os.path.exists(self.log_file_path):
+            self.current_log_dir = os.path.dirname(self.log_file_path)
+            # Get the Logs base directory (parent of log_YYYY.MM.DD_H-mm-ss)
+            self.logs_base_dir = os.path.dirname(self.current_log_dir)
+            print(f"[LogMonitor] 基础日志目录: {self.logs_base_dir}")
+            print(f"[LogMonitor] 当前日志子目录: {self.current_log_dir}")
 
         # 如果设置了从末尾开始，则跳过现有内容
         if self.start_from_end:
@@ -192,10 +255,34 @@ class LogMonitor:
                 self.last_position = 0
 
         self.is_running = True
+        last_dir_check_time = time.time()
 
         def monitor_loop():
+            nonlocal last_dir_check_time
+
             while self.is_running:
                 try:
+                    # Periodically check for new log directories (every 30 seconds)
+                    current_time = time.time()
+                    if self.logs_base_dir and (current_time - last_dir_check_time) >= 30:
+                        latest_log_dir = self._get_latest_log_dir(self.logs_base_dir)
+                        if latest_log_dir and latest_log_dir != self.current_log_dir:
+                            print(f"[LogMonitor] 检测到新的日志目录: {latest_log_dir}")
+                            # Switch to new log directory
+                            new_log_file = os.path.join(latest_log_dir, os.path.basename(self.log_file_path))
+                            if os.path.exists(new_log_file):
+                                print(f"[LogMonitor] 切换到新日志文件: {new_log_file}")
+                                self.log_file_path = new_log_file
+                                self.current_log_dir = latest_log_dir
+                                self.last_position = 0  # Start from beginning of new file
+
+                                # Notify callback if registered
+                                if self.on_log_switch:
+                                    self.on_log_switch(new_log_file)
+
+                        last_dir_check_time = current_time
+
+                    # Read new log lines
                     with open(self.log_file_path, 'r', encoding='utf-8', errors='ignore') as f:
                         # 跳转到上次读取的位置
                         f.seek(self.last_position)
@@ -204,8 +291,13 @@ class LogMonitor:
                         new_lines = f.readlines()
                         if new_lines:
                             for line in new_lines:
-                                raid_info = self.parser.parse_line(line.strip())
-                                if raid_info and self.on_raid_start:
+                                event_type, raid_info = self.parser.parse_line(line.strip())
+
+                                # 处理地图加载事件
+                                if event_type == "map_loading" and raid_info and self.on_map_loading:
+                                    self.on_map_loading(raid_info)
+                                # 处理战局开始事件
+                                elif event_type == "raid_started" and raid_info and self.on_raid_start:
                                     self.on_raid_start(raid_info)
 
                         # 更新位置

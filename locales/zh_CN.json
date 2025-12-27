@@ -306,6 +306,21 @@
       "import_auto_fix_multiple_base_maps": "自动修复：导入数据中发现多个大地图。\n已保留图层0（或第一个图层）为大地图，其他转换为楼层图。"
     }
   },
+  "maps": {
+    "bigmap": "海关",
+    "factory4_day": "工厂",
+    "factory4_night": "工厂",
+    "Interchange": "立交桥",
+    "laboratory": "实验室",
+    "Labyrinth": "迷宫",
+    "Lighthouse": "灯塔",
+    "RezervBase": "储备站",
+    "Sandbox": "中心区",
+    "Sandbox_high": "中心区（高层）",
+    "Shoreline": "海岸线",
+    "TarkovStreets": "街区",
+    "Woods": "森林"
+  },
   "global_settings": {
     "title": "全局设置",
     "subtitle": "配置应用程序的全局参数",

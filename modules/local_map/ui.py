@@ -25,6 +25,11 @@ from watchdog.events import FileSystemEventHandler
 from utils.i18n import t
 from utils.hotkey_manager import get_hotkey_manager
 
+# Map variant groups - maps that should be displayed as one entry in UI
+MAP_VARIANTS = {
+    "factory": ["factory4_day", "factory4_night"]
+}
+
 
 class LocalMapUI(ctk.CTkFrame):
     """本地地图模块UI"""
@@ -35,6 +40,7 @@ class LocalMapUI(ctk.CTkFrame):
         self.config_manager = MapConfigManager()
         self.current_map_id: Optional[str] = None
         self.current_layer_id: int = 0
+        self.last_detected_variant: dict = {}  # Track last detected variant for grouped maps (e.g., {"factory": "factory4_day"})
         self.calibration_mode: bool = False
         self.tracking_mode: bool = True  # 默认开启位置追踪
         self.deletion_mode: bool = False  # 删除校准点模式
@@ -662,7 +668,38 @@ class LocalMapUI(ctk.CTkFrame):
     def _load_maps(self):
         """加载地图列表"""
         maps = self.config_manager.get_all_maps()
-        map_names = [f"{m.display_name} ({m.map_id})" for m in maps]
+
+        # Group maps by variant and use localized names
+        seen_groups = set()
+        map_entries = []
+
+        for m in maps:
+            # Check if this map belongs to a variant group
+            group_key = None
+            for group, variants in MAP_VARIANTS.items():
+                if m.map_id in variants:
+                    group_key = group
+                    break
+
+            # If part of a group and already seen, skip
+            if group_key and group_key in seen_groups:
+                continue
+
+            # Get localized name
+            localized_name = t(f"maps.{m.map_id}")
+
+            # For grouped maps, use the group key for internal reference
+            if group_key:
+                seen_groups.add(group_key)
+                map_entries.append((localized_name, group_key, m.map_id))  # (display, group_key, first_variant)
+            else:
+                map_entries.append((localized_name, m.map_id, m.map_id))  # (display, map_id, map_id)
+
+        # Create display values (just the localized names)
+        map_names = [entry[0] for entry in map_entries]
+        # Store the mapping for later use
+        self._map_name_to_id = {entry[0]: entry[1:] for entry in map_entries}
+
         self.map_selector.configure(values=map_names)
         if map_names:
             self.map_selector.set(map_names[0])
@@ -670,9 +707,17 @@ class LocalMapUI(ctk.CTkFrame):
 
     def _on_map_selected(self, selection: str):
         """地图选择事件"""
-        # 解析选择的地图ID
-        if "(" in selection and ")" in selection:
-            map_id = selection.split("(")[1].split(")")[0]
+        # Get map_id from the new mapping
+        if selection in self._map_name_to_id:
+            group_or_id, first_variant = self._map_name_to_id[selection]
+
+            # For grouped maps (like factory), use last detected variant or default to first
+            if group_or_id in MAP_VARIANTS:
+                # Use last detected variant if available, otherwise use first variant
+                map_id = self.last_detected_variant.get(group_or_id, first_variant)
+            else:
+                map_id = group_or_id
+
             self.current_map_id = map_id
 
             map_config = self.config_manager.get_map_config(map_id)
@@ -686,6 +731,22 @@ class LocalMapUI(ctk.CTkFrame):
                 self.layer_selector.configure(values=["None"])
                 self.layer_selector.set("None")
                 self.status_label.configure(text=t("local_map.status.no_layer_configured"))
+        else:
+            # Fallback for old format "Display Name (map_id)" - for backward compatibility
+            if "(" in selection and ")" in selection:
+                map_id = selection.split("(")[1].split(")")[0]
+                self.current_map_id = map_id
+
+                map_config = self.config_manager.get_map_config(map_id)
+                if map_config and map_config.layers:
+                    layer_names = [f"Layer {l.layer_id}: {l.name}" for l in map_config.layers]
+                    self.layer_selector.configure(values=layer_names)
+                    self.layer_selector.set(layer_names[0])
+                    self._on_layer_selected(layer_names[0])
+                else:
+                    self.layer_selector.configure(values=["None"])
+                    self.layer_selector.set("None")
+                    self.status_label.configure(text=t("local_map.status.no_layer_configured"))
 
     def _on_layer_selected(self, selection: str):
         """层级选择事件"""
@@ -968,9 +1029,11 @@ class LocalMapUI(ctk.CTkFrame):
         try:
             self.log_monitor = LogMonitor(
                 log_file_path=log_file_path,
-                on_raid_start=self._on_raid_start_detected,
+                on_raid_start=None,  # 可选：用于调试或记录战局真正开始的时间
                 on_raid_end=None,
-                start_from_end=True  # 启动时跳过现有内容，只监控新增内容
+                on_map_loading=self._on_map_loading_detected,  # 地图加载时立即切换
+                start_from_end=True,  # 启动时跳过现有内容，只监控新增内容
+                on_log_switch=self._on_log_file_switched  # 日志文件切换回调
             )
             self.log_monitor.start()
             print("[本地地图] 日志监控已启动")
@@ -1128,7 +1191,7 @@ class LocalMapUI(ctk.CTkFrame):
                 # 更新状态栏（显示当前层级信息）
                 layer_info = f"[{layer.name}]" if not layer.is_base_map else f"[{t('local_map.base_map')}]"
                 self.status_label.configure(
-                    text=t("local_map.status.coord_transformed", layer_info=layer_info, game_x=f"{player_pos.position.x:.1f}", game_z=f"{player_pos.position.z:.1f}", map_x=f"{map_x:.1f}", map_y=f"{map_y:.1f}", yaw=yaw)
+                    text=t("local_map.status.coord_transform", layer_info=layer_info, game_x=f"{player_pos.position.x:.1f}", game_z=f"{player_pos.position.z:.1f}", map_x=f"{map_x:.1f}", map_y=f"{map_y:.1f}", yaw=yaw)
                 )
 
                 # 同时更新悬浮小地图
@@ -1140,16 +1203,16 @@ class LocalMapUI(ctk.CTkFrame):
                     text=t("local_map.status.transform_failed", error=str(e))
                 )
 
-    def _on_raid_start_detected(self, raid_info):
+    def _on_map_loading_detected(self, raid_info):
         """
-        日志监控检测到战局开始，自动切换地图
+        日志监控检测到地图加载，自动切换地图
 
         Args:
             raid_info: RaidInfo 对象，包含 map_id, raid_id 等信息
         """
         detected_map_id = raid_info.map_id
 
-        print(f"[本地地图] 检测到战局开始: {detected_map_id} (RaidID: {raid_info.raid_id})")
+        print(f"[本地地图] 检测到地图加载: {detected_map_id} (RaidID: {raid_info.raid_id})")
 
         # 验证地图 ID 是否有效
         map_config = self.config_manager.get_map_config(detected_map_id)
@@ -1157,24 +1220,70 @@ class LocalMapUI(ctk.CTkFrame):
             print(f"[本地地图] 地图 '{detected_map_id}' 不在配置中，跳过自动切换")
             return
 
-        # 转换为 UI 选择格式: "DisplayName (map_id)"
-        selection_text = f"{map_config.display_name} ({detected_map_id})"
+        # 验证地图是否配置了大地图（basemap）
+        base_map = map_config.get_base_map()
+        if not base_map:
+            print(f"[本地地图] 地图 '{detected_map_id}' 未配置大地图，跳过自动切换")
+            # 显示状态栏提示
+            def update_status():
+                if hasattr(self, 'status_label'):
+                    localized_name = t(f"maps.{detected_map_id}")
+                    self.status_label.configure(
+                        text=f"⚠ {localized_name} 未配置大地图，无法自动切换",
+                        text_color="orange"
+                    )
+            self.after(0, update_status)
+            return
 
-        print(f"[本地地图] 自动切换到地图: {selection_text}")
+        # Check if this map belongs to a variant group
+        group_key = None
+        for group, variants in MAP_VARIANTS.items():
+            if detected_map_id in variants:
+                group_key = group
+                # Store the detected variant for this group
+                self.last_detected_variant[group_key] = detected_map_id
+                print(f"[本地地图] 检测到 {group_key} 变体: {detected_map_id}")
+                break
+
+        # Get localized name for display
+        localized_name = t(f"maps.{detected_map_id}")
+
+        print(f"[本地地图] 自动切换到地图: {localized_name}")
 
         # 在主线程中更新 UI (回调在后台线程)
         def update_ui():
-            self.map_selector.set(selection_text)
-            self._on_map_selected(selection_text)
+            self.map_selector.set(localized_name)
+            self._on_map_selected(localized_name)
 
             # Update status bar with notification
             if hasattr(self, 'status_label'):
                 self.status_label.configure(
-                    text=t("local_map.status.auto_switched_map", map_name=map_config.display_name),
+                    text=t("local_map.status.auto_switched_map", map_name=localized_name),
                     text_color="green"
                 )
 
         self.after(0, update_ui)
+
+    def _on_log_file_switched(self, new_log_path: str):
+        """
+        日志文件切换回调（游戏重启时触发）
+
+        Args:
+            new_log_path: 新的日志文件路径
+        """
+        print(f"[本地地图] 日志文件已切换: {new_log_path}")
+
+        # 在主线程中更新状态栏
+        def update_status():
+            if hasattr(self, 'status_label'):
+                from pathlib import Path
+                log_dir_name = Path(new_log_path).parent.name
+                self.status_label.configure(
+                    text=f"✓ 日志监控已切换到新目录: {log_dir_name}",
+                    text_color="cyan"
+                )
+
+        self.after(0, update_status)
 
     def _on_canvas_click(self, map_x: float, map_y: float):
         """Canvas点击事件"""
@@ -2344,8 +2453,67 @@ class LocalMapUI(ctk.CTkFrame):
                 with open(config_path, "r", encoding="utf-8") as f:
                     config_data = json.load(f)
 
-                # 检查是否已存在同ID的地图
+                # 获取导入的地图ID
                 map_id = config_data["map_id"]
+
+                # 检查地图ID是否在已知的官方地图中（用于自动跳转）
+                from .log_parser import LogParser
+                official_map_ids = set(LogParser.MAP_BUNDLES.values())
+
+                # 如果map_id不在官方地图列表中，询问用户是否要替换某个官方地图
+                if map_id not in official_map_ids:
+                    # 创建一个简单的对话框让用户选择要替换的地图
+                    dialog = ctk.CTkToplevel(self)
+                    dialog.title("选择官方地图 / Select Official Map")
+                    dialog.geometry("400x300")
+                    # Make dialog modal
+                    dialog.grab_set()
+
+                    # 说明文本
+                    label = ctk.CTkLabel(
+                        dialog,
+                        text=f"导入的地图ID '{map_id}' 不是官方地图。\n\n如果这张地图替换某个官方地图（如海关、工厂等），\n请选择对应的官方地图以启用自动跳转功能。\n\n如果这是全新的自定义地图，请选择'不替换'。",
+                        wraplength=350,
+                        justify="left"
+                    )
+                    label.pack(pady=20, padx=20)
+
+                    # 下拉框
+                    map_choices = ["不替换 (Keep current ID)"] + [f"{t(f'maps.{mid}')} ({mid})" for mid in sorted(official_map_ids)]
+                    selected_map = ctk.StringVar(value=map_choices[0])
+
+                    combo = ctk.CTkComboBox(dialog, variable=selected_map, values=map_choices, width=350)
+                    combo.pack(pady=10, padx=20)
+
+                    result = {"confirmed": False, "selected_id": map_id}
+
+                    def on_confirm():
+                        choice = selected_map.get()
+                        if choice != map_choices[0]:  # Not "不替换"
+                            # Extract map_id from "DisplayName (map_id)"
+                            result["selected_id"] = choice.split("(")[1].split(")")[0]
+                        result["confirmed"] = True
+                        dialog.destroy()
+
+                    def on_cancel():
+                        dialog.destroy()
+
+                    btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+                    btn_frame.pack(pady=10)
+
+                    ctk.CTkButton(btn_frame, text="确定", command=on_confirm, width=100).pack(side="left", padx=10)
+                    ctk.CTkButton(btn_frame, text="取消", command=on_cancel, width=100).pack(side="left", padx=10)
+
+                    dialog.wait_window()
+
+                    if not result["confirmed"]:
+                        return
+
+                    # 使用用户选择的官方地图ID
+                    map_id = result["selected_id"]
+                    print(f"[Import] 用户选择替换为官方地图: {map_id}")
+
+                # 检查是否已存在同ID的地图
                 existing = self.config_manager.get_map_config(map_id)
 
                 if existing:

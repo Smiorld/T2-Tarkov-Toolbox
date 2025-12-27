@@ -306,6 +306,21 @@
       "import_auto_fix_multiple_base_maps": "Auto-fix applied: Multiple base maps found in import data.\nLayer 0 (or first layer) has been kept as base map, others converted to floor maps."
     }
   },
+  "maps": {
+    "bigmap": "Customs",
+    "factory4_day": "Factory",
+    "factory4_night": "Factory",
+    "Interchange": "Interchange",
+    "laboratory": "Labs",
+    "Labyrinth": "Labyrinth",
+    "Lighthouse": "Lighthouse",
+    "RezervBase": "Reserve",
+    "Sandbox": "Ground Zero",
+    "Sandbox_high": "Ground Zero (High)",
+    "Shoreline": "Shoreline",
+    "TarkovStreets": "Streets of Tarkov",
+    "Woods": "Woods"
+  },
   "global_settings": {
     "title": "Global Settings",
     "subtitle": "Configure application-wide parameters",
