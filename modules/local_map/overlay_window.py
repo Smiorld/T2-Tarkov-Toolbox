@@ -429,9 +429,8 @@ class OverlayMapWindow(ctk.CTkToplevel):
         # 保存缩放级别
         self._saved_zoom = new_zoom
 
-        # 如果是玩家居中模式，重新计算offset
-        if self.player_centered:
-            self._update_player_centering()
+        # 不在缩放时重新居中，让用户自由缩放查看
+        # 下次位置更新时会自动居中（如果居中模式仍开启）
 
     def set_lock_state(self, is_locked: bool):
         """设置锁定/解锁状态"""
@@ -489,7 +488,7 @@ class OverlayMapWindow(ctk.CTkToplevel):
             self._auto_follow_timer = None
 
     def _update_player_centering(self):
-        """更新玩家居中（定时调用）"""
+        """更新玩家居中（仅在新位置数据到达时调用一次）"""
         if not self.player_centered or self._player_map_x is None:
             return
 
@@ -514,9 +513,8 @@ class OverlayMapWindow(ctk.CTkToplevel):
             # 触发重绘
             self.map_canvas._render()
 
-        # 继续跟随（每100ms更新一次）
-        if self.player_centered:
-            self._auto_follow_timer = self.after(100, self._update_player_centering)
+        # 不再设置定时器，只在新位置到达时才居中
+        # 用户可以自由拖动地图，直到下次位置更新
 
     def set_opacity(self, opacity: float):
         """设置透明度"""

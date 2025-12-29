@@ -8,6 +8,39 @@ import re
 from datetime import datetime
 from typing import Optional, List
 from .models import RaidInfo
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+
+class LogDirectoryWatcher(FileSystemEventHandler):
+    """
+    监控日志目录，检测新的 application.log 文件创建
+
+    当游戏重启时，会创建新的 log_YYYY.MM.DD_H-mm-ss/ 目录，
+    并在其中生成新的 application.log 文件。
+
+    此类监听这些文件创建事件，立即通知 LogMonitor 切换。
+    """
+
+    def __init__(self, on_new_log_file):
+        """
+        Args:
+            on_new_log_file: 回调函数 (new_log_path: str) -> None
+        """
+        super().__init__()
+        self.on_new_log_file = on_new_log_file
+
+    def on_created(self, event):
+        """文件创建事件处理"""
+        import os
+        if event.is_directory:
+            return
+
+        # 检测 application.log 或 application_000.log 等
+        filename = os.path.basename(event.src_path)
+        if "application" in filename and filename.endswith(".log"):
+            print(f"[LogDirectoryWatcher] 检测到新日志文件: {event.src_path}")
+            self.on_new_log_file(event.src_path)
 
 
 class LogParser:
@@ -182,6 +215,9 @@ class LogMonitor:
         self.is_running = False
         self.logs_base_dir = None  # Will be set to the parent Logs directory
         self.current_log_dir = None  # Current log subdirectory being monitored
+        self.last_dir_check_time = 0  # 移到实例属性，用于轮询备用检查
+        self.fs_observer = None  # FileSystemWatcher observer
+        self.dir_watcher = None  # Event handler
 
     def _get_latest_log_dir(self, logs_base_dir):
         """
@@ -210,8 +246,8 @@ class LogMonitor:
         latest_date = None
 
         for folder in log_folders:
-            # Format: log_YYYY.MM.DD_H-mm-ss
-            match = re.match(r'log_(\d{4})\.(\d{2})\.(\d{2})_(\d+)-(\d{2})-(\d{2})', folder)
+            # Format: log_YYYY.MM.DD_H-mm-ss (H can be 1 or 2 digits)
+            match = re.match(r'log_(\d{4})\.(\d{2})\.(\d{2})_(\d{1,2})-(\d{2})-(\d{2})', folder)
             if match:
                 try:
                     year, month, day, hour, minute, second = map(int, match.groups())
@@ -222,9 +258,51 @@ class LogMonitor:
                 except ValueError:
                     continue
 
+        # 备选方案：如果时间戳解析全部失败，返回最后一个目录
+        if latest_folder is None and log_folders:
+            latest_folder = sorted(log_folders)[-1]  # 按字母排序取最后一个
+            print(f"[LogMonitor] 警告：时间戳解析失败，使用备选方案选择目录: {latest_folder}")
+
         if latest_folder:
             return os.path.join(logs_base_dir, latest_folder)
         return None
+
+    def _on_new_log_file_detected(self, new_log_path: str):
+        """
+        当 FileSystemWatcher 检测到新的日志文件创建时调用
+
+        这是事件驱动的切换机制，延迟 < 100ms
+        """
+        import os
+        new_log_dir = os.path.dirname(new_log_path)
+
+        # 检查是否真的是新目录
+        if new_log_dir == self.current_log_dir:
+            print(f"[LogMonitor] 忽略同目录内的文件: {new_log_path}")
+            return
+
+        print(f"[LogMonitor] 游戏重启！新日志目录: {new_log_dir}")
+
+        # 立即切换
+        self.log_file_path = new_log_path
+        self.current_log_dir = new_log_dir
+
+        # 根据 start_from_end 设置决定起始位置
+        if self.start_from_end:
+            try:
+                with open(new_log_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    f.seek(0, 2)  # 跳到末尾
+                    self.last_position = f.tell()
+                    print(f"[LogMonitor] 跳过现有内容，从位置 {self.last_position} 开始")
+            except Exception as e:
+                print(f"[LogMonitor] 定位文件末尾失败: {e}，从头读取")
+                self.last_position = 0
+        else:
+            self.last_position = 0
+
+        # 触发回调通知 UI
+        if self.on_log_switch:
+            self.on_log_switch(new_log_path)
 
     def start(self):
         """开始监控日志文件"""
@@ -254,20 +332,34 @@ class LogMonitor:
                 print(f"[LogMonitor] 初始化文件位置时发生错误: {e}，从头开始监控")
                 self.last_position = 0
 
+        # 启动文件系统监控（事件驱动的日志切换）
+        if self.logs_base_dir:
+            try:
+                self.dir_watcher = LogDirectoryWatcher(
+                    on_new_log_file=self._on_new_log_file_detected
+                )
+                self.fs_observer = Observer()
+                # 递归监控 Logs/ 目录及其子目录
+                self.fs_observer.schedule(self.dir_watcher, self.logs_base_dir, recursive=True)
+                self.fs_observer.start()
+                print(f"[LogMonitor] 启动文件系统监控: {self.logs_base_dir}")
+            except Exception as e:
+                print(f"[LogMonitor] 启动文件系统监控失败: {e}，将使用轮询备用方案")
+                self.fs_observer = None
+
         self.is_running = True
-        last_dir_check_time = time.time()
 
         def monitor_loop():
-            nonlocal last_dir_check_time
 
             while self.is_running:
                 try:
-                    # Periodically check for new log directories (every 30 seconds)
+                    # Fallback: Periodically check for new log directories (every 60 seconds)
+                    # 主要依赖 FileSystemWatcher，这只是备用方案
                     current_time = time.time()
-                    if self.logs_base_dir and (current_time - last_dir_check_time) >= 30:
+                    if self.logs_base_dir and (current_time - self.last_dir_check_time) >= 60:
                         latest_log_dir = self._get_latest_log_dir(self.logs_base_dir)
                         if latest_log_dir and latest_log_dir != self.current_log_dir:
-                            print(f"[LogMonitor] 检测到新的日志目录: {latest_log_dir}")
+                            print(f"[LogMonitor] 备用检查：检测到新的日志目录: {latest_log_dir}")
                             # Switch to new log directory
                             new_log_file = os.path.join(latest_log_dir, os.path.basename(self.log_file_path))
                             if os.path.exists(new_log_file):
@@ -280,7 +372,7 @@ class LogMonitor:
                                 if self.on_log_switch:
                                     self.on_log_switch(new_log_file)
 
-                        last_dir_check_time = current_time
+                        self.last_dir_check_time = current_time
 
                     # Read new log lines
                     with open(self.log_file_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -304,9 +396,29 @@ class LogMonitor:
                         self.last_position = f.tell()
 
                 except FileNotFoundError:
-                    print(f"日志文件不存在: {self.log_file_path}")
+                    print(f"[LogMonitor] 日志文件不存在: {self.log_file_path}")
+
+                    # 立即尝试恢复：查找最新日志目录
+                    if self.logs_base_dir:
+                        latest_log_dir = self._get_latest_log_dir(self.logs_base_dir)
+                        if latest_log_dir and latest_log_dir != self.current_log_dir:
+                            # 查找新目录中的 application.log
+                            import glob
+                            log_files = glob.glob(os.path.join(latest_log_dir, "*application*.log"))
+                            if log_files:
+                                new_log_file = max(log_files, key=os.path.getmtime)  # 最新的
+                                print(f"[LogMonitor] 恢复：切换到新日志文件 {new_log_file}")
+                                self.log_file_path = new_log_file
+                                self.current_log_dir = latest_log_dir
+                                self.last_position = 0
+                                if self.on_log_switch:
+                                    self.on_log_switch(new_log_file)
+                                continue  # 立即重试，不睡眠
+
                 except Exception as e:
-                    print(f"监控日志文件时发生错误: {e}")
+                    print(f"[LogMonitor] 监控日志文件时发生错误: {e}")
+                    import traceback
+                    traceback.print_exc()  # 打印详细堆栈，便于调试
 
                 # 等待5秒后再次检查
                 time.sleep(5)
@@ -317,6 +429,15 @@ class LogMonitor:
     def stop(self):
         """停止监控"""
         self.is_running = False
+
+        # 停止文件系统监控
+        if hasattr(self, 'fs_observer') and self.fs_observer:
+            try:
+                self.fs_observer.stop()
+                self.fs_observer.join(timeout=5)
+                print("[LogMonitor] 文件系统监控已停止")
+            except Exception as e:
+                print(f"[LogMonitor] 停止文件系统监控时发生错误: {e}")
 
 
 # 测试代码
