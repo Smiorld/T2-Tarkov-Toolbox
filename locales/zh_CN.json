@@ -116,11 +116,11 @@
       "core_functions": "⚡ 核心功能"
     },
     "map_management": {
-      "new_layer": "新建层级",
+      "new_layer": "导入地图（新建层级）",
       "config_layer_height": "配置层级高度",
       "delete_layer": "删除层级",
-      "export_map": "导出地图",
-      "import_map_config": "导入地图"
+      "export_map": "导出数据",
+      "import_map_config": "导入数据"
     },
     "calibration": {
       "calibration_mode": "校准模式",
@@ -163,7 +163,7 @@
       "lock_overlay": "锁定悬浮窗",
       "unlock_overlay": "解锁悬浮窗",
       "player_centered": "玩家居中",
-      "overlay_hotkey": "显影: {overlay_hotkey}",
+      "overlay_hotkey": "悬浮窗快捷键: {overlay_hotkey}",
       "overlay_hotkey_not_set": "快捷键: 未设置",
       "zoom_in_hotkey": "放大: {zoom_in_hotkey}",
       "zoom_in_hotkey_not_set": "放大: 未设置",

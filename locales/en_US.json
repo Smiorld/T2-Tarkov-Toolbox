@@ -116,11 +116,11 @@
       "core_functions": "⚡ Core Functions"
     },
     "map_management": {
-      "new_layer": "New Layer",
+      "new_layer": "Import Map (New Layer)",
       "config_layer_height": "Configure Layer Height",
       "delete_layer": "Delete Layer",
-      "export_map": "Export Map",
-      "import_map_config": "Import Map"
+      "export_map": "Export Data",
+      "import_map_config": "Import Data"
     },
     "calibration": {
       "calibration_mode": "Calibration Mode",
