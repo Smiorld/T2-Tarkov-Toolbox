@@ -75,6 +75,7 @@ class MapConfigManager:
         default_maps = [
             ("bigmap", "Customs"),
             ("Interchange", "Interchange"),
+            ("Labyrinth", "Labyrinth"),  # 新增迷宫地图
             ("Lighthouse", "Lighthouse"),
             ("TarkovStreets", "Streets of Tarkov"),
             ("Woods", "Woods"),
