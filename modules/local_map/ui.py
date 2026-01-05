@@ -2050,17 +2050,15 @@ class LocalMapUI(ctk.CTkFrame):
             messagebox.showerror(t("common.error"), t("local_map.messages.invalid_number"))
 
     def _update_overlay_position(self):
-        """更新悬浮窗玩家位置"""
-        if not self.overlay_window or not self.overlay_visible:
-            return
-
+        """更新悬浮窗玩家位置和坐标缓存"""
+        # === 阶段1: 数据校验（始终执行，不受overlay可见性影响）===
         if not self.latest_screenshot_pos:
             return
 
         if not self.current_map_id:
             return
 
-        # 计算地图坐标
+        # 计算地图坐标（缓存层始终加载）
         try:
             # 获取地图配置
             map_config = self.config_manager.get_map_config(self.current_map_id)
@@ -2124,8 +2122,9 @@ class LocalMapUI(ctk.CTkFrame):
             # 应用旋转偏移
             yaw += layer.rotation_offset
 
-            # 更新悬浮窗位置
-            self.overlay_window.update_player_position(map_x, map_y, yaw)
+            # === 阶段2: 更新悬浮窗视觉（仅当overlay可见时执行）===
+            if self.overlay_window and self.overlay_visible:
+                self.overlay_window.update_player_position(map_x, map_y, yaw)
         except Exception as e:
             print(f"更新悬浮窗位置失败: {e}")
 
