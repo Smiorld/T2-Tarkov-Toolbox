@@ -774,6 +774,40 @@ class LocalMapUI(ctk.CTkFrame):
                             # 显示校准点
                             self._display_calibration_points(layer)
 
+                            # === 新增：重新计算并显示玩家自己的位置 ===
+                            if self.latest_screenshot_pos:
+                                try:
+                                    # 获取当前楼层的坐标转换器
+                                    from modules.local_map.map_resource_cache import get_resource_cache
+                                    resource_cache = get_resource_cache()
+
+                                    transform = resource_cache.get_transform(
+                                        self.config_manager,
+                                        self.current_map_id,
+                                        layer_id,
+                                        player_pos=self.latest_screenshot_pos.position
+                                    )
+
+                                    if transform:
+                                        # 重新计算地图坐标
+                                        map_x, map_y = transform.transform(self.latest_screenshot_pos.position)
+
+                                        # 重新计算朝向
+                                        yaw = self.latest_screenshot_pos.rotation.to_yaw()
+                                        corrected_yaw = yaw + layer.rotation_offset
+
+                                        # 更新显示
+                                        self.map_canvas.show_player_position(map_x, map_y, corrected_yaw)
+
+                                        # 同步到overlay
+                                        if self.overlay_window and self.overlay_window.map_canvas:
+                                            self.overlay_window.map_canvas.show_player_position(map_x, map_y, corrected_yaw)
+
+                                        print(f"[UI] 楼层切换后重新显示玩家位置: ({map_x:.1f}, {map_y:.1f})")
+                                except Exception as e:
+                                    print(f"[UI] 楼层切换后重算玩家位置失败: {e}")
+                            # === 新增结束 ===
+
                             # === 改：悬浮窗共享资源，不重复加载 ===
                             if self.overlay_window and self.overlay_visible:
                                 # 不重复加载，只同步路径和重绘
