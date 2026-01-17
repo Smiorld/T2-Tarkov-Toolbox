@@ -24,6 +24,7 @@ class MapName(Enum):
     SANDBOX_HIGH = "Sandbox_high"
     SHORELINE = "Shoreline"
     STREETS = "TarkovStreets"
+    TERMINAL = "Terminal"
     WOODS = "Woods"
 
 

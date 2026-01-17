@@ -69,6 +69,7 @@ class LogParser:
         "sandbox_high_preset": "Sandbox_high",
         "shopping_mall": "Interchange",
         "shoreline_preset": "Shoreline",
+        "terminal_preset": "Terminal",
         "woods_preset": "Woods",
     }
 

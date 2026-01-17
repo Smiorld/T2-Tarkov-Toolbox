@@ -85,6 +85,7 @@ class MapConfigManager:
             ("factory4_night", "Factory (Night)"),
             ("laboratory", "Laboratory"),
             ("Sandbox", "Ground Zero"),
+            ("Terminal", "Terminal"),
         ]
 
         for map_id, display_name in default_maps:
