@@ -82,12 +82,19 @@ class LocalMapUI(ctk.CTkFrame):
         self.screenshots_path = self.global_config.get_screenshots_path()
         self.logs_path = self.global_config.get_logs_path()
 
+        # 自动清空截图配置
+        self.auto_clear_enabled = False
+        self.clear_timing = "raid_end"  # "raid_end" | "immediately"
+
         # 注册配置变更回调
         self.global_config.on_config_change(self._on_config_change)
 
         self._setup_ui()
         self._load_maps()
         self._migrate_config_if_needed()  # 执行配置迁移（仅首次运行）
+
+        # 加载自动清空配置（UI创建后）
+        self._load_overlay_state()
 
         # Register hotkeys with unified manager
         self._register_hotkeys()
@@ -493,6 +500,32 @@ class LocalMapUI(ctk.CTkFrame):
         )
         self.player_centered_switch.pack(side="left", padx=5)
         self.player_centered_switch.select()
+
+        # 自动清空截图开关
+        self.auto_clear_switch = ctk.CTkSwitch(
+            row1,
+            text=t("local_map.core_functions.auto_clear_screenshots"),
+            command=self._toggle_auto_clear,
+            fg_color="#2d5a2d",
+            progress_color="#4a9d4a",
+            font=ctk.CTkFont(size=11)
+        )
+        self.auto_clear_switch.pack(side="left", padx=5)
+
+        # 清空时点下拉框
+        self.clear_timing_combo = ctk.CTkComboBox(
+            row1,
+            values=[
+                t("local_map.core_functions.clear_on_raid_end"),
+                t("local_map.core_functions.clear_immediately")
+            ],
+            width=100,
+            height=24,
+            font=ctk.CTkFont(size=10),
+            command=self._on_clear_timing_changed
+        )
+        self.clear_timing_combo.pack(side="left", padx=2)
+        self.clear_timing_combo.set(t("local_map.core_functions.clear_on_raid_end"))
 
         self.log_status_label = ctk.CTkLabel(
             row1,
@@ -1064,7 +1097,7 @@ class LocalMapUI(ctk.CTkFrame):
             self.log_monitor = LogMonitor(
                 log_file_path=log_file_path,
                 on_raid_start=None,  # 可选：用于调试或记录战局真正开始的时间
-                on_raid_end=None,
+                on_raid_end=self._on_raid_end,  # 战局结束时清空截图（如果启用）
                 on_map_loading=self._on_map_loading_detected,  # 地图加载时立即切换
                 start_from_end=True,  # 启动时跳过现有内容，只监控新增内容
                 on_log_switch=self._on_log_file_switched  # 日志文件切换回调
@@ -1184,6 +1217,9 @@ class LocalMapUI(ctk.CTkFrame):
                        )
             )
             print(f"新截图: {player_pos.position}, 自动层级: {layer.name}")
+            # 如果启用了"截图后立刻"清空，删除刚处理的截图
+            if self.auto_clear_enabled and self.clear_timing == "immediately":
+                self._delete_screenshot(file_path)
             return
 
         # 位置追踪模式：如果已完成校准，自动显示玩家位置
@@ -1230,12 +1266,27 @@ class LocalMapUI(ctk.CTkFrame):
 
                 # 同时更新悬浮小地图
                 self._update_overlay_position()
-                
+
+                # 如果启用了"截图后立刻"清空，删除刚处理的截图
+                if self.auto_clear_enabled and self.clear_timing == "immediately":
+                    self._delete_screenshot(file_path)
+
             except Exception as e:
                 print(f"转换坐标失败: {e}")
                 self.status_label.configure(
                     text=t("local_map.status.transform_failed", error=str(e))
                 )
+
+    def _on_raid_end(self, raid_info):
+        """
+        日志监控检测到战局结束
+
+        Args:
+            raid_info: RaidInfo 对象，包含战局信息
+        """
+        print(f"[本地地图] 检测到战局结束: {raid_info}")
+        if self.auto_clear_enabled and self.clear_timing == "raid_end":
+            self._clear_screenshots_directory()
 
     def _on_map_loading_detected(self, raid_info):
         """
@@ -1984,41 +2035,54 @@ class LocalMapUI(ctk.CTkFrame):
             self._save_overlay_state()
 
     def _load_overlay_state(self):
-        """加载悬浮窗状态"""
-        if not self.overlay_window:
-            return
-
+        """加载悬浮窗状态和自动清空配置"""
         try:
             import json
             config_path = "map_config.json"
             if os.path.exists(config_path):
                 with open(config_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    overlay_state = data.get("overlay_state")
-                    if overlay_state:
-                        self.overlay_window.load_state(overlay_state)
-                        # 同步UI控件
-                        self.opacity_slider.set(overlay_state.get("opacity", 0.85))
-                        if overlay_state.get("player_centered", True):
-                            self.player_centered_switch.select()
-                        else:
-                            self.player_centered_switch.deselect()
 
-                        # 同步尺寸输入框
-                        width = overlay_state.get("width", 400)
-                        height = overlay_state.get("height", 400)
-                        self.overlay_width_entry.delete(0, "end")
-                        self.overlay_width_entry.insert(0, str(width))
-                        self.overlay_height_entry.delete(0, "end")
-                        self.overlay_height_entry.insert(0, str(height))
+                    # 加载自动清空配置
+                    self.auto_clear_enabled = data.get("auto_clear_enabled", False)
+                    self.clear_timing = data.get("clear_timing", "raid_end")
+
+                    # 同步自动清空UI控件
+                    if hasattr(self, 'auto_clear_switch'):
+                        if self.auto_clear_enabled:
+                            self.auto_clear_switch.select()
+                        else:
+                            self.auto_clear_switch.deselect()
+                    if hasattr(self, 'clear_timing_combo'):
+                        if self.clear_timing == "immediately":
+                            self.clear_timing_combo.set(t("local_map.core_functions.clear_immediately"))
+                        else:
+                            self.clear_timing_combo.set(t("local_map.core_functions.clear_on_raid_end"))
+
+                    # 加载悬浮窗状态（如果悬浮窗已创建）
+                    if self.overlay_window:
+                        overlay_state = data.get("overlay_state")
+                        if overlay_state:
+                            self.overlay_window.load_state(overlay_state)
+                            # 同步UI控件
+                            self.opacity_slider.set(overlay_state.get("opacity", 0.85))
+                            if overlay_state.get("player_centered", True):
+                                self.player_centered_switch.select()
+                            else:
+                                self.player_centered_switch.deselect()
+
+                            # 同步尺寸输入框
+                            width = overlay_state.get("width", 400)
+                            height = overlay_state.get("height", 400)
+                            self.overlay_width_entry.delete(0, "end")
+                            self.overlay_width_entry.insert(0, str(width))
+                            self.overlay_height_entry.delete(0, "end")
+                            self.overlay_height_entry.insert(0, str(height))
         except Exception as e:
             print(f"加载悬浮窗状态失败: {e}")
 
     def _save_overlay_state(self):
-        """保存悬浮窗状态"""
-        if not self.overlay_window:
-            return
-
+        """保存悬浮窗状态和自动清空配置"""
         try:
             import json
             config_path = "map_config.json"
@@ -2029,8 +2093,13 @@ class LocalMapUI(ctk.CTkFrame):
                 with open(config_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
 
-            # 更新悬浮窗状态
-            data["overlay_state"] = self.overlay_window.get_state()
+            # 更新悬浮窗状态（如果存在）
+            if self.overlay_window:
+                data["overlay_state"] = self.overlay_window.get_state()
+
+            # 保存自动清空截图配置
+            data["auto_clear_enabled"] = self.auto_clear_enabled
+            data["clear_timing"] = self.clear_timing
 
             # 保存
             with open(config_path, "w", encoding="utf-8") as f:
@@ -2050,6 +2119,51 @@ class LocalMapUI(ctk.CTkFrame):
         if self.overlay_window:
             new_state = not self.overlay_window.player_centered
             self.overlay_window.set_player_centered(new_state)
+
+    def _toggle_auto_clear(self):
+        """切换自动清空截图开关"""
+        self.auto_clear_enabled = self.auto_clear_switch.get() == 1
+        self._save_overlay_state()
+        print(f"[UI] 自动清空截图: {'开启' if self.auto_clear_enabled else '关闭'}")
+
+    def _on_clear_timing_changed(self, value):
+        """清空时点选择变更"""
+        if value == t("local_map.core_functions.clear_immediately"):
+            self.clear_timing = "immediately"
+        else:
+            self.clear_timing = "raid_end"
+        self._save_overlay_state()
+        print(f"[UI] 清空时点: {self.clear_timing}")
+
+    def _clear_screenshots_directory(self):
+        """清空截图目录"""
+        screenshots_path = self.global_config.get_screenshots_path()
+
+        if not screenshots_path or not os.path.exists(screenshots_path):
+            print(f"[UI] 截图目录不存在: {screenshots_path}")
+            return
+
+        try:
+            deleted_count = 0
+            for filename in os.listdir(screenshots_path):
+                file_path = os.path.join(screenshots_path, filename)
+                if os.path.isfile(file_path):
+                    # 只删除图片文件
+                    if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
+                        os.remove(file_path)
+                        deleted_count += 1
+            print(f"[UI] 战局结束清空截图目录: 删除了 {deleted_count} 个文件")
+        except Exception as e:
+            print(f"[UI] 清空截图目录失败: {e}")
+
+    def _delete_screenshot(self, file_path: str):
+        """删除单个截图文件"""
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print(f"[UI] 已删除截图: {file_path}")
+        except Exception as e:
+            print(f"[UI] 删除截图失败: {e}")
 
     def _apply_settings(self):
         """应用窗口尺寸和缩放步进设置"""
