@@ -82,9 +82,8 @@ class LocalMapUI(ctk.CTkFrame):
         self.screenshots_path = self.global_config.get_screenshots_path()
         self.logs_path = self.global_config.get_logs_path()
 
-        # 自动清空截图配置
+        # 自动删除截图配置
         self.auto_clear_enabled = False
-        self.clear_timing = "raid_end"  # "raid_end" | "immediately"
 
         # 注册配置变更回调
         self.global_config.on_config_change(self._on_config_change)
@@ -501,31 +500,16 @@ class LocalMapUI(ctk.CTkFrame):
         self.player_centered_switch.pack(side="left", padx=5)
         self.player_centered_switch.select()
 
-        # 自动清空截图开关
+        # 截图后自动删除开关
         self.auto_clear_switch = ctk.CTkSwitch(
             row1,
-            text=t("local_map.core_functions.auto_clear_screenshots"),
+            text=t("local_map.core_functions.auto_delete_screenshots"),
             command=self._toggle_auto_clear,
             fg_color="#2d5a2d",
             progress_color="#4a9d4a",
             font=ctk.CTkFont(size=11)
         )
         self.auto_clear_switch.pack(side="left", padx=5)
-
-        # 清空时点下拉框
-        self.clear_timing_combo = ctk.CTkComboBox(
-            row1,
-            values=[
-                t("local_map.core_functions.clear_on_raid_end"),
-                t("local_map.core_functions.clear_immediately")
-            ],
-            width=100,
-            height=24,
-            font=ctk.CTkFont(size=10),
-            command=self._on_clear_timing_changed
-        )
-        self.clear_timing_combo.pack(side="left", padx=2)
-        self.clear_timing_combo.set(t("local_map.core_functions.clear_on_raid_end"))
 
         self.log_status_label = ctk.CTkLabel(
             row1,
@@ -1096,8 +1080,8 @@ class LocalMapUI(ctk.CTkFrame):
         try:
             self.log_monitor = LogMonitor(
                 log_file_path=log_file_path,
-                on_raid_start=None,  # 可选：用于调试或记录战局真正开始的时间
-                on_raid_end=self._on_raid_end,  # 战局结束时清空截图（如果启用）
+                on_raid_start=None,
+                on_raid_end=None,  # 不再使用战局结束回调
                 on_map_loading=self._on_map_loading_detected,  # 地图加载时立即切换
                 start_from_end=True,  # 启动时跳过现有内容，只监控新增内容
                 on_log_switch=self._on_log_file_switched  # 日志文件切换回调
@@ -1148,145 +1132,132 @@ class LocalMapUI(ctk.CTkFrame):
 
     def _on_new_screenshot(self, file_path: str):
         """检测到新截图"""
-        # 如果两个模式都没开启，直接返回
-        if not self.calibration_mode and not self.tracking_mode:
-            return
-
-        if not self.current_map_id:
-            return
-
-        # 解析截图
-        player_pos = ScreenshotParser.parse(file_path, self.current_map_id)
-        if not player_pos:
-            return
-
-        # 保存完整的玩家位置（包括旋转）
-        self.latest_screenshot_pos = player_pos
-
-        # 获取地图配置
-        map_config = self.config_manager.get_map_config(self.current_map_id)
-        if not map_config:
-            return
-
-        # === 新的智能层级选择逻辑 ===
-        # 1. 获取大地图
-        base_map = map_config.get_base_map()
-        if not base_map:
-            # 没有大地图，回退到旧逻辑（向后兼容）
-            layer = map_config.get_layer_by_height(player_pos.position.y)
-            if not layer:
-                layer = map_config.get_layer_by_id(self.current_layer_id)
-            if not layer:
+        try:
+            # 如果两个模式都没开启，直接返回
+            if not self.calibration_mode and not self.tracking_mode:
                 return
-        else:
-            # 有大地图，使用新的智能选择
-            # 2. 计算玩家在大地图上的坐标（如果大地图已校准）
-            base_map_transform = None
-            if base_map.is_calibrated():
+
+            if not self.current_map_id:
+                return
+
+            # 解析截图
+            player_pos = ScreenshotParser.parse(file_path, self.current_map_id)
+            if not player_pos:
+                return
+
+            # 保存完整的玩家位置（包括旋转）
+            self.latest_screenshot_pos = player_pos
+
+            # 获取地图配置
+            map_config = self.config_manager.get_map_config(self.current_map_id)
+            if not map_config:
+                return
+
+            # === 新的智能层级选择逻辑 ===
+            # 1. 获取大地图
+            base_map = map_config.get_base_map()
+            if not base_map:
+                # 没有大地图，回退到旧逻辑（向后兼容）
+                layer = map_config.get_layer_by_height(player_pos.position.y)
+                if not layer:
+                    layer = map_config.get_layer_by_id(self.current_layer_id)
+                if not layer:
+                    return
+            else:
+                # 有大地图，使用新的智能选择
+                # 2. 计算玩家在大地图上的坐标（如果大地图已校准）
+                base_map_transform = None
+                if base_map.is_calibrated():
+                    try:
+                        # === 改：使用全局缓存 ===
+                        from modules.local_map.map_resource_cache import get_resource_cache
+                        resource_cache = get_resource_cache()
+
+                        base_map_transform = resource_cache.get_transform(
+                            self.config_manager,
+                            self.current_map_id,
+                            base_map.layer_id,
+                            player_pos=player_pos.position
+                        )
+                        # === 改动结束 ===
+                    except Exception as e:
+                        print(f"计算大地图坐标变换失败: {e}")
+
+                # 3. 智能选择激活的层级（区域+高度）
+                layer = map_config.get_active_layer(
+                    player_pos.position,
+                    base_map_transform
+                )
+                if not layer:
+                    return
+            # 如果是校准模式，只显示坐标信息
+            if self.calibration_mode:
+                layer_type = t("local_map.base_map") if layer.is_base_map else t("local_map.floor_map")
+                self.status_label.configure(
+                    text=t("local_map.status.screenshot_detected",
+                           position=player_pos.position,
+                           height=f"{player_pos.position.y:.2f}",
+                           layer_name=layer.name,
+                           layer_type=layer_type
+                           )
+                )
+                print(f"新截图: {player_pos.position}, 自动层级: {layer.name}")
+                return
+
+            # 位置追踪模式：如果已完成校准，自动显示玩家位置
+            if self.tracking_mode and layer.is_calibrated():
                 try:
-                    # === 改：使用全局缓存 ===
+                    # T2手动修复层级自动跳转逻辑。
+                    layer_str = f"Layer {layer.layer_id}: {layer.name}"
+                    if layer_str != self.latest_layer:
+                        self.layer_selector.set(layer_str)
+                        self._on_layer_selected(layer_str)
+                        self.latest_layer = layer_str
+
+                    # === 改：使用全局缓存的Transform ===
                     from modules.local_map.map_resource_cache import get_resource_cache
                     resource_cache = get_resource_cache()
 
-                    base_map_transform = resource_cache.get_transform(
+                    transform = resource_cache.get_transform(
                         self.config_manager,
                         self.current_map_id,
-                        base_map.layer_id,
-                        player_pos=player_pos.position
+                        layer.layer_id,
+                        player_pos=player_pos.position  # 启用局部插值
                     )
                     # === 改动结束 ===
+
+                    # 转换游戏坐标到地图坐标
+                    map_x, map_y = transform.transform(player_pos.position)
+
+                    # 计算朝向角度
+                    yaw = player_pos.rotation.to_yaw()
+
+                    # 应用地图旋转偏移（修正地图方向）
+                    # 如果地图旋转了（如180°），需要补偿这个旋转
+                    corrected_yaw = yaw + layer.rotation_offset
+
+
+                    # 在地图上显示玩家位置
+                    self.map_canvas.show_player_position(map_x, map_y, corrected_yaw)
+
+                    # 更新状态栏（显示当前层级信息）
+                    layer_info = f"[{layer.name}]" if not layer.is_base_map else f"[{t('local_map.base_map')}]"
+                    self.status_label.configure(
+                        text=t("local_map.status.coord_transform", layer_info=layer_info, game_x=f"{player_pos.position.x:.1f}", game_z=f"{player_pos.position.z:.1f}", map_x=f"{map_x:.1f}", map_y=f"{map_y:.1f}", yaw=yaw)
+                    )
+
+                    # 同时更新悬浮小地图
+                    self._update_overlay_position()
+
                 except Exception as e:
-                    print(f"计算大地图坐标变换失败: {e}")
-
-            # 3. 智能选择激活的层级（区域+高度）
-            layer = map_config.get_active_layer(
-                player_pos.position,
-                base_map_transform
-            )
-            if not layer:
-                return
-        # 如果是校准模式，只显示坐标信息
-        if self.calibration_mode:
-            layer_type = t("local_map.base_map") if layer.is_base_map else t("local_map.floor_map")
-            self.status_label.configure(
-                text=t("local_map.status.screenshot_detected",
-                       position=player_pos.position,
-                       height=f"{player_pos.position.y:.2f}",
-                       layer_name=layer.name,
-                       layer_type=layer_type
-                       )
-            )
-            print(f"新截图: {player_pos.position}, 自动层级: {layer.name}")
-            # 如果启用了"截图后立刻"清空，删除刚处理的截图
-            if self.auto_clear_enabled and self.clear_timing == "immediately":
+                    print(f"转换坐标失败: {e}")
+                    self.status_label.configure(
+                        text=t("local_map.status.transform_failed", error=str(e))
+                    )
+        finally:
+            # 无论处理成功与否，都执行删除逻辑
+            if self.auto_clear_enabled:
                 self._delete_screenshot(file_path)
-            return
-
-        # 位置追踪模式：如果已完成校准，自动显示玩家位置
-        if self.tracking_mode and layer.is_calibrated():
-            try:
-                # T2手动修复层级自动跳转逻辑。
-                layer_str = f"Layer {layer.layer_id}: {layer.name}"
-                if layer_str != self.latest_layer:
-                    self.layer_selector.set(layer_str)
-                    self._on_layer_selected(layer_str)
-                    self.latest_layer = layer_str
-                    
-                # === 改：使用全局缓存的Transform ===
-                from modules.local_map.map_resource_cache import get_resource_cache
-                resource_cache = get_resource_cache()
-
-                transform = resource_cache.get_transform(
-                    self.config_manager,
-                    self.current_map_id,
-                    layer.layer_id,
-                    player_pos=player_pos.position  # 启用局部插值
-                )
-                # === 改动结束 ===
-
-                # 转换游戏坐标到地图坐标
-                map_x, map_y = transform.transform(player_pos.position)
-
-                # 计算朝向角度
-                yaw = player_pos.rotation.to_yaw()
-
-                # 应用地图旋转偏移（修正地图方向）
-                # 如果地图旋转了（如180°），需要补偿这个旋转
-                corrected_yaw = yaw + layer.rotation_offset
-
-                
-                # 在地图上显示玩家位置
-                self.map_canvas.show_player_position(map_x, map_y, corrected_yaw)
-                
-                # 更新状态栏（显示当前层级信息）
-                layer_info = f"[{layer.name}]" if not layer.is_base_map else f"[{t('local_map.base_map')}]"
-                self.status_label.configure(
-                    text=t("local_map.status.coord_transform", layer_info=layer_info, game_x=f"{player_pos.position.x:.1f}", game_z=f"{player_pos.position.z:.1f}", map_x=f"{map_x:.1f}", map_y=f"{map_y:.1f}", yaw=yaw)
-                )
-
-                # 同时更新悬浮小地图
-                self._update_overlay_position()
-
-                # 如果启用了"截图后立刻"清空，删除刚处理的截图
-                if self.auto_clear_enabled and self.clear_timing == "immediately":
-                    self._delete_screenshot(file_path)
-
-            except Exception as e:
-                print(f"转换坐标失败: {e}")
-                self.status_label.configure(
-                    text=t("local_map.status.transform_failed", error=str(e))
-                )
-
-    def _on_raid_end(self, raid_info):
-        """
-        日志监控检测到战局结束
-
-        Args:
-            raid_info: RaidInfo 对象，包含战局信息
-        """
-        print(f"[本地地图] 检测到战局结束: {raid_info}")
-        if self.auto_clear_enabled and self.clear_timing == "raid_end":
-            self._clear_screenshots_directory()
 
     def _on_map_loading_detected(self, raid_info):
         """
@@ -2043,21 +2014,15 @@ class LocalMapUI(ctk.CTkFrame):
                 with open(config_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
 
-                    # 加载自动清空配置
+                    # 加载自动删除截图配置
                     self.auto_clear_enabled = data.get("auto_clear_enabled", False)
-                    self.clear_timing = data.get("clear_timing", "raid_end")
 
-                    # 同步自动清空UI控件
+                    # 同步自动删除UI控件
                     if hasattr(self, 'auto_clear_switch'):
                         if self.auto_clear_enabled:
                             self.auto_clear_switch.select()
                         else:
                             self.auto_clear_switch.deselect()
-                    if hasattr(self, 'clear_timing_combo'):
-                        if self.clear_timing == "immediately":
-                            self.clear_timing_combo.set(t("local_map.core_functions.clear_immediately"))
-                        else:
-                            self.clear_timing_combo.set(t("local_map.core_functions.clear_on_raid_end"))
 
                     # 加载悬浮窗状态（如果悬浮窗已创建）
                     if self.overlay_window:
@@ -2097,9 +2062,8 @@ class LocalMapUI(ctk.CTkFrame):
             if self.overlay_window:
                 data["overlay_state"] = self.overlay_window.get_state()
 
-            # 保存自动清空截图配置
+            # 保存自动删除截图配置
             data["auto_clear_enabled"] = self.auto_clear_enabled
-            data["clear_timing"] = self.clear_timing
 
             # 保存
             with open(config_path, "w", encoding="utf-8") as f:
@@ -2125,36 +2089,6 @@ class LocalMapUI(ctk.CTkFrame):
         self.auto_clear_enabled = self.auto_clear_switch.get() == 1
         self._save_overlay_state()
         print(f"[UI] 自动清空截图: {'开启' if self.auto_clear_enabled else '关闭'}")
-
-    def _on_clear_timing_changed(self, value):
-        """清空时点选择变更"""
-        if value == t("local_map.core_functions.clear_immediately"):
-            self.clear_timing = "immediately"
-        else:
-            self.clear_timing = "raid_end"
-        self._save_overlay_state()
-        print(f"[UI] 清空时点: {self.clear_timing}")
-
-    def _clear_screenshots_directory(self):
-        """清空截图目录"""
-        screenshots_path = self.global_config.get_screenshots_path()
-
-        if not screenshots_path or not os.path.exists(screenshots_path):
-            print(f"[UI] 截图目录不存在: {screenshots_path}")
-            return
-
-        try:
-            deleted_count = 0
-            for filename in os.listdir(screenshots_path):
-                file_path = os.path.join(screenshots_path, filename)
-                if os.path.isfile(file_path):
-                    # 只删除图片文件
-                    if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
-                        os.remove(file_path)
-                        deleted_count += 1
-            print(f"[UI] 战局结束清空截图目录: 删除了 {deleted_count} 个文件")
-        except Exception as e:
-            print(f"[UI] 清空截图目录失败: {e}")
 
     def _delete_screenshot(self, file_path: str):
         """删除单个截图文件"""

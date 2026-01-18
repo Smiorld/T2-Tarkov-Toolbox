@@ -153,11 +153,6 @@ class LogParser:
             raid_info = self.current_raid
             return ("raid_started", raid_info)
 
-        # 检测战局结束
-        if "UserMatchOver" in line and self.current_raid:
-            self.current_raid.end_time = datetime.now()
-            self.current_raid = None  # 重置当前战局
-
         # 检测服务器IP（可能在不同的日志格式中）
         # 注意：需要根据实际的日志格式调整正则表达式
         if self.current_raid and not self.current_raid.server_ip:
